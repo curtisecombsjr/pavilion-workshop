@@ -296,32 +296,28 @@ SLIDES = [
            "less drift, one place to fix things."},
 
  {"type": "code", "title": "Inheritance in action", "kicker": "A big one",
-  "code_size": 14, "code_h": 5.0,
+  "code_size": 12.5, "code_h": 5.45,
   "code":
-    "base:                          # shared config, written once\n"
+    "base:                        # shared config, written once\n"
     "  variables:\n"
     "    threads: 2\n"
     "  build:\n"
-    "    source_path: stream.c\n"
-    "    cmds:\n"
-    "      - 'gcc -O3 -fopenmp stream.c -o stream'\n"
+    "    cmds: ['gcc -O3 -fopenmp stream.c -o stream']\n"
     "  run:\n"
-    "    cmds:\n"
-    "      - 'OMP_NUM_THREADS={{threads}} ./stream'\n"
+    "    cmds: ['OMP_NUM_THREADS={{threads}} ./stream']\n"
     "\n"
     "small:\n"
-    "  inherits_from: base          # that's it — inherits everything\n"
+    "  inherits_from: base        # that's it — inherits everything\n"
     "\n"
     "large:\n"
     "  inherits_from: base\n"
     "  variables:\n"
-    "    threads: 5                 # override just the variable\n"
+    "    threads: 5               # override just the variable\n"
     "\n"
     "debug:\n"
     "  inherits_from: base\n"
-    "  build:\n"
-    "    cmds:\n"
-    "      - 'gcc -O3 -fopenmp -fsanitize=address stream.c -o stream'   # override the build",
+    "  build:                     # override just the build flags\n"
+    "    cmds: ['gcc -O3 -fopenmp -fsanitize=address stream.c -o stream']",
   "notes": "One base owns the shared config and a variable (threads: 2). 'small' is literally just "
            "inherits_from: base — it takes everything. 'large' inherits and overrides only the variable "
            "(threads: 5). 'debug' inherits and overrides only the build, adding -fsanitize=address. "
