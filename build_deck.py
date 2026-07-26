@@ -440,6 +440,7 @@ SLIDES = [
     "matrix:\n"
     "  scheduler: pbs\n"
     "  schedule:\n"
+    "    share_allocation: false      # one PBS job per instance\n"
     "    pbs: { queue: workq, nodes: 1, walltime: '00:02:00' }\n"
     "  permute_on: [size, mode]\n"
     "  variables:\n"
@@ -450,25 +451,34 @@ SLIDES = [
     "    cmds:\n"
     "      - 'echo \"size={{size}} mode={{mode}}\"'\n"
     "\n"
-    "# 3 sizes x 2 modes  =>  6 test instances, one config.",
-  "notes": "The feature people remember. One definition, six tests, each with its own subtitle."},
+    "# 3 sizes x 2 modes  =>  6 test instances, 6 PBS jobs.",
+  "notes": "The feature people remember. One definition, six tests, each with its own subtitle. "
+           "share_allocation: false makes Pavilion submit a separate PBS job per instance (the default "
+           "packs them into one shared allocation)."},
 
  {"type": "demo", "title": "Permutations expand", "level": "L3", "run": "03-permutations.sh",
   "steps": [
     {"cmd": "pav run demo_perms.matrix",
-     "out": "Test set 'demo_perms.matrix' created 6 tests, skipped 0, 0 errors.\nsid: s72"},
-    {"cmd": "qstat -a                        # all six ride one PBS job",
-     "out": "8385.pbs-server pavilion workq pav_demo_*  1  1  R"},
-    {"cmd": "pav status s72",
-     "out": "s72.1  PASS  demo_perms.matrix.small-read\n"
-            "s72.2  PASS  demo_perms.matrix.medium-read\n"
-            "s72.3  PASS  demo_perms.matrix.large-read\n"
-            "s72.4  PASS  demo_perms.matrix.small-write\n"
-            "s72.5  PASS  demo_perms.matrix.medium-write\n"
-            "s72.6  PASS  demo_perms.matrix.large-write"},
+     "out": "Test set 'demo_perms.matrix' created 6 tests, skipped 0, 0 errors.\nsid: s93"},
+    {"cmd": "qstat -a                        # SIX PBS jobs — one per permutation",
+     "out": "8400.pbs-server pavilion workq pav_demo_*  1  1  R\n"
+            "8401.pbs-server pavilion workq pav_demo_*  1  1  R\n"
+            "8402.pbs-server pavilion workq pav_demo_*  1  1  Q\n"
+            "8403.pbs-server pavilion workq pav_demo_*  1  1  Q\n"
+            "8404.pbs-server pavilion workq pav_demo_*  1  1  Q\n"
+            "8405.pbs-server pavilion workq pav_demo_*  1  1  Q"},
+    {"cmd": "pav status s93                  # each instance = its own job id",
+     "out": "s93.1 | 8400_pbs-server | demo_perms.matrix.small-read  | PASS\n"
+            "s93.2 | 8401_pbs-server | demo_perms.matrix.medium-read | PASS\n"
+            "s93.3 | 8402_pbs-server | demo_perms.matrix.large-read  | PASS\n"
+            "s93.4 | 8403_pbs-server | demo_perms.matrix.small-write | PASS\n"
+            "s93.5 | 8404_pbs-server | demo_perms.matrix.medium-write| PASS\n"
+            "s93.6 | 8405_pbs-server | demo_perms.matrix.large-write | PASS"},
   ],
-  "caption": "One YAML block → six named PBS test instances, all PASS.",
-  "notes": "Point out the auto-generated subtitles (size-mode). All six went through PBS (qstat)."},
+  "caption": "One YAML block → six PBS jobs (8400–8405), one per permutation — some run, the rest queue.",
+  "notes": "share_allocation: false gives each permutation its OWN PBS job (distinct job ids 8400–8405). "
+           "With one free node they run a couple at a time and the rest sit in Q — real scheduler behavior. "
+           "Point out the auto-generated subtitles (size-mode)."},
 
  {"type": "section", "title": "Schedulers", "kicker": "Running at scale"},
  {"type": "bullets", "title": "Schedulers & the PBS plugin", "kicker": "Schedulers",
@@ -553,8 +563,12 @@ SLIDES = [
     "# config/series/demo_series.yaml\n"
     "ordered: False\n"
     "test_sets:\n"
-    "  smoke:  { tests: [demo_pbs.pass] }\n"
-    "  perf:   { tests: [demo_pbs.metrics] }",
+    "  smoke:\n"
+    "    tests:\n"
+    "      - demo_pbs.pass\n"
+    "  perf:\n"
+    "    tests:\n"
+    "      - demo_pbs.metrics",
   "notes": "Sets can be ordered or not; unordered runs them concurrently (robust for a live demo). "
            "Each set becomes its own PBS job."},
 
