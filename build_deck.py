@@ -296,31 +296,36 @@ SLIDES = [
            "less drift, one place to fix things."},
 
  {"type": "code", "title": "Inheritance in action", "kicker": "A big one",
-  "code_size": 13.5, "code_h": 5.0,
+  "code_size": 14, "code_h": 5.0,
   "code":
-    "base:                          # shared config lives here, once\n"
-    "  scheduler: pbs\n"
-    "  schedule: {pbs: {queue: workq, nodes: 1}}\n"
+    "base:                          # shared config, written once\n"
+    "  variables:\n"
+    "    threads: 2\n"
     "  build:\n"
     "    source_path: stream.c\n"
-    "    cmds: ['gcc -O3 -fopenmp stream.c -o stream']\n"
+    "    cmds:\n"
+    "      - 'gcc -O3 -fopenmp stream.c -o stream'\n"
     "  run:\n"
-    "    cmds: ['./stream']\n"
+    "    cmds:\n"
+    "      - 'OMP_NUM_THREADS={{threads}} ./stream'\n"
     "\n"
     "small:\n"
-    "  inherits_from: base\n"
-    "  variables: {threads: 1}                 # override just this\n"
+    "  inherits_from: base          # that's it — inherits everything\n"
     "\n"
     "large:\n"
     "  inherits_from: base\n"
-    "  schedule: {pbs: {nodes: 4}}             # override the node count\n"
+    "  variables:\n"
+    "    threads: 5                 # override just the variable\n"
     "\n"
     "debug:\n"
     "  inherits_from: base\n"
-    "  build: {cmds: ['gcc -O0 -g stream.c -o stream']}   # override the build",
-  "notes": "One base, three variants — each inherits_from base and overrides only its delta "
-           "(threads, node count, build flags). Verified live: a child inherits the parent's PBS "
-           "scheduler and overrides its own variables. The DRY win."},
+    "  build:\n"
+    "    cmds:\n"
+    "      - 'gcc -O3 -fopenmp -fsanitize=address stream.c -o stream'   # override the build",
+  "notes": "One base owns the shared config and a variable (threads: 2). 'small' is literally just "
+           "inherits_from: base — it takes everything. 'large' inherits and overrides only the variable "
+           "(threads: 5). 'debug' inherits and overrides only the build, adding -fsanitize=address. "
+           "Each child writes just its delta — that's the DRY win."},
 
  {"type": "code", "title": "A fuller test (YAML)", "kicker": "Concepts",
   "intro": "Same shape, more of it — variables, PBS + a queue, and build → run → parse → evaluate.",
