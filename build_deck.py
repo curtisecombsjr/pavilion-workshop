@@ -631,6 +631,7 @@ SLIDES = [
   "notes": "These add new verbs to pav itself — just Python classes Pavilion auto-discovers."},
 
  {"type": "demo", "title": "Custom commands in action", "level": "L7", "run": "07-command-plugins.sh",
+  "out_size": 11.5,
   "steps": [
     {"cmd": "pav hello --name Team",
      "out": "Hello, Team!  Welcome to Pavilion 2!"},
@@ -640,25 +641,18 @@ SLIDES = [
             "[s75.2] opensearch_verify.os_fail                     FAIL"},
     {"cmd": "pav test-summary",
      "out": "PASS: 74    FAIL: 8    TOTAL: 83"},
-  ],
-  "caption": "New pav subcommands — our own tooling built on Pavilion's plugin API.",
-  "notes": "recent/test-summary read Pavilion's own run database via cmd_utils."},
-
- {"type": "demo", "title": "Disk usage at a glance", "level": "L7 · disk-usage", "run": "07-command-plugins.sh",
-  "steps": [
-    {"cmd": "pav disk-usage        # our command plugin: where the space goes",
+    {"cmd": "pav disk-usage        # where the space goes",
      "out": "Config Area: main\n"
-            "  Working Dir: /home/pavilion/pavilion2/working_dir\n"
             "  Test Runs:     4.42 MB\n"
             "  Builds:       59.77 MB\n"
-            "\n"
             "Series:          16.84 MB\n"
-            "------------------------------------------------------------\n"
+            "------------------------------------------------\n"
             "TOTAL USAGE:    145.22 MB"},
   ],
-  "caption": "Another command plugin — a quick accounting of what test runs, builds, and series consume.",
-  "notes": "disk-usage walks Pavilion's working dir and totals runs / builds / series. Handy for spotting "
-           "when old builds need a 'pav clean'. Same plugin API as hello/recent/test-summary."},
+  "caption": "Four new pav subcommands — our own tooling built on Pavilion's plugin API.",
+  "notes": "hello/recent/test-summary/disk-usage all add new verbs to pav itself. recent/test-summary "
+           "read Pavilion's run database via cmd_utils; disk-usage totals runs / builds / series (handy "
+           "before a 'pav clean'). Same plugin API for all four."},
 
  {"type": "bullets", "title": "Result loggers (ours)", "kicker": "Custom output",
   "bullets": [
