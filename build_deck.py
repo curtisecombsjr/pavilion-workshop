@@ -284,6 +284,35 @@ SLIDES = [
     "# Address it as:  suite.test   ->   demo_pbs.pass",
   "notes": "Emphasize: the exit code decides PASS/FAIL. It's dispatched to PBS (queue workq)."},
 
+ {"type": "code", "title": "A fuller test (YAML)", "kicker": "Concepts",
+  "intro": "Same shape, more of it — variables, PBS + a queue, and build → run → parse → evaluate.",
+  "code_size": 13.5, "code_h": 5.0,
+  "code":
+    "stream:\n"
+    "  variables:\n"
+    "    array_size: 40000000\n"
+    "    threads: 4\n"
+    "  scheduler: pbs\n"
+    "  schedule:\n"
+    "    pbs:\n"
+    "      queue: workq          # target a queue\n"
+    "      nodes: 1\n"
+    "      walltime: '00:05:00'\n"
+    "  build:                    # compile from source\n"
+    "    source_path: stream.c\n"
+    "    cmds: ['gcc -fopenmp -DN={{array_size}} stream.c -o stream']\n"
+    "  run:\n"
+    "    env: {OMP_NUM_THREADS: '{{threads}}'}\n"
+    "    cmds: ['./stream']\n"
+    "  result_parse:\n"
+    "    regex:\n"
+    "      triad_mbs: {regex: 'Triad:\\s+(\\S+)'}\n"
+    "  result_evaluate:\n"
+    "    result: 'triad_mbs > 10000'    # PASS only if fast enough",
+  "notes": "The fuller shape: a couple of variables up top (used below), the PBS scheduler targeting "
+           "a queue, then the four stages — build (compile from source), run, result_parse (regex → "
+           "triad_mbs), and result_evaluate (a pass/fail expression). Still just YAML."},
+
  {"type": "bullets", "title": "Inheritable test definitions", "kicker": "A big one",
   "bullets": [
     "Write shared config once in a base test — scheduler, build, run, parsing.",
@@ -322,35 +351,6 @@ SLIDES = [
            "inherits_from: base — it takes everything. 'large' inherits and overrides only the variable "
            "(threads: 5). 'debug' inherits and overrides only the build, adding -fsanitize=address. "
            "Each child writes just its delta — that's the DRY win."},
-
- {"type": "code", "title": "A fuller test (YAML)", "kicker": "Concepts",
-  "intro": "Same shape, more of it — variables, PBS + a queue, and build → run → parse → evaluate.",
-  "code_size": 13.5, "code_h": 5.0,
-  "code":
-    "stream:\n"
-    "  variables:\n"
-    "    array_size: 40000000\n"
-    "    threads: 4\n"
-    "  scheduler: pbs\n"
-    "  schedule:\n"
-    "    pbs:\n"
-    "      queue: workq          # target a queue\n"
-    "      nodes: 1\n"
-    "      walltime: '00:05:00'\n"
-    "  build:                    # compile from source\n"
-    "    source_path: stream.c\n"
-    "    cmds: ['gcc -fopenmp -DN={{array_size}} stream.c -o stream']\n"
-    "  run:\n"
-    "    env: {OMP_NUM_THREADS: '{{threads}}'}\n"
-    "    cmds: ['./stream']\n"
-    "  result_parse:\n"
-    "    regex:\n"
-    "      triad_mbs: {regex: 'Triad:\\s+(\\S+)'}\n"
-    "  result_evaluate:\n"
-    "    result: 'triad_mbs > 10000'    # PASS only if fast enough",
-  "notes": "The fuller shape: a couple of variables up top (used below), the PBS scheduler targeting "
-           "a queue, then the four stages — build (compile from source), run, result_parse (regex → "
-           "triad_mbs), and result_evaluate (a pass/fail expression). Still just YAML."},
 
  {"type": "bullets", "title": "The CLI you'll use", "kicker": "Concepts",
   "bullets": [
