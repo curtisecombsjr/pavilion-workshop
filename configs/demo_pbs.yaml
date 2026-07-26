@@ -1,0 +1,24 @@
+# demo_pbs: PBS-scheduled basics. Every run is a real PBS job (qstat -a shows it).
+pass:
+  summary: 'Trivial PASS via PBS'
+  scheduler: pbs
+  schedule: {pbs: {queue: workq, nodes: 1, walltime: '00:02:00'}}
+  run:
+    cmds: ['echo "hello from $(hostname)"']
+fail:
+  summary: 'Intentional FAIL via PBS'
+  scheduler: pbs
+  schedule: {pbs: {queue: workq, nodes: 1, walltime: '00:02:00'}}
+  run:
+    cmds: ['echo "this fails on purpose"', 'exit 7']
+metrics:
+  summary: 'PASS with parsed metrics via PBS'
+  scheduler: pbs
+  schedule: {pbs: {queue: workq, nodes: 1, walltime: '00:02:00'}}
+  run:
+    cmds: ['echo "throughput 123.45"', 'echo "latency 5.6"', 'echo "errors 0"']
+  result_parse:
+    regex:
+      throughput_mbs: {regex: 'throughput (\S+)'}
+      latency_ms: {regex: 'latency (\S+)'}
+      errors: {regex: 'errors (\S+)'}

@@ -1,11 +1,12 @@
 #!/usr/bin/env bash
-# saLog — our NASA/NOAA CSV logger (emulation script on pbs-server). Flags: -n -c -u -a.
+# saLog — our NASA/NOAA CSV logger. Show it end-to-end: run in pav -> job in PBS -> CSV row.
 source "$(dirname "$0")/_lib.sh"
 cd /home/pavilion/pavilion2
-say "cat saLog        # the emulator — flags: -n node  -c content  -u user  -a action"
-cat saLog
+say "pav --quiet run demo_pbs.pass demo_pbs.fail   # 1. run in Pavilion"
+out=$(pav --quiet run demo_pbs.pass demo_pbs.fail); echo "$out"
+sid=$(echo "$out" | grep -oE 's[0-9]+' | head -1)
+qstat_show   # 2. the jobs, running in PBS
+pav --quiet wait "$sid" >/dev/null 2>&1
 pause
-say "./saLog -n x1003c7s7b0n3 -c 'pav_test result=PASS' -u pavilion -a released"
-./saLog -n x1003c7s7b0n3 -c 'pav_test result=PASS' -u pavilion -a released
-say "tail -3 salog_output.txt        # appends a CSV row"
+say "tail -3 salog_output.txt        # 3. the CSV saLog wrote as nodes were released"
 tail -3 salog_output.txt

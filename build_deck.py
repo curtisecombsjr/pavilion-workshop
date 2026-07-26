@@ -145,12 +145,13 @@ def demo_slide(spec):
     output, interleaved in one monospace box (kept sized to fit — no overflow)."""
     s = prs.slides.add_slide(BLANK)
     _titlebar(s, spec["title"], "LIVE DEMO · " + spec.get("level", ""))
-    # run-cue chip (top-right)
-    chip = s.shapes.add_shape(1, Inches(9.3), Inches(0.5), Inches(3.4), Inches(0.55))
-    chip.fill.solid(); chip.fill.fore_color.rgb = ACCENT; chip.line.fill.background()
-    ctf = chip.text_frame; ctf.word_wrap = True
-    _set(ctf.paragraphs[0].add_run(), "▶  " + spec["run"], 13, WHITE, bold=True)
-    ctf.paragraphs[0].alignment = PP_ALIGN.CENTER
+    # run-cue chip (top-right) — only when there's a script to cue
+    if spec.get("run"):
+        chip = s.shapes.add_shape(1, Inches(9.3), Inches(0.5), Inches(3.4), Inches(0.55))
+        chip.fill.solid(); chip.fill.fore_color.rgb = ACCENT; chip.line.fill.background()
+        ctf = chip.text_frame; ctf.word_wrap = True
+        _set(ctf.paragraphs[0].add_run(), "▶  " + spec["run"], 13, WHITE, bold=True)
+        ctf.paragraphs[0].alignment = PP_ALIGN.CENTER
     # transcript box
     box = s.shapes.add_shape(1, Inches(0.7), Inches(1.8), Inches(12), Inches(spec.get("box_h", 4.75)))
     box.fill.solid(); box.fill.fore_color.rgb = CODEBG
@@ -203,8 +204,9 @@ SLIDES = [
     "An open-source (LANL) framework for testing HPC systems.",
     "Mature & battle-tested — years of development at LANL, hardened on production supercomputers.",
     "Tests are YAML configs that wrap your test codes — not scripts you maintain by hand.",
-    "Runs the same tests across systems and schedulers (raw, Slurm, Flux, PBS).",
+    "Runs the same tests across systems and schedulers (Slurm, Flux, PBS).",
     "Plugin-driven: schedulers, result parsers, result loggers, commands, system variables.",
+    "Inheritable test definitions — write shared config once; tests inherit and override it (DRY).",
   ],
   "notes": "The pitch for a mixed audience: stop hand-writing brittle test scripts. Describe "
            "a test once in YAML; Pavilion handles building, scheduling, running, parsing, and "
@@ -234,13 +236,13 @@ SLIDES = [
  {"type": "bullets", "title": "The building blocks", "kicker": "Concepts",
   "bullets": [
     "Test — one thing to run, defined in YAML (build + run + result parsing).",
-    "Suite — a YAML file holding related tests (e.g. demo_echo.yaml).",
+    "Suite — a YAML file holding related tests (e.g. demo_pbs.yaml).",
     "Config layering — host → mode → test: defaults get overridden in that order.",
     "Variables & permutations — one definition expands into many test instances.",
     "config_dirs — where Pavilion looks for suites, modes, series, and plugins.",
   ],
   "notes": "Name each concept plainly. 'suite.test' is how you address a test, e.g. "
-           "demo_echo.demo_pass_raw."},
+           "demo_pbs.pass."},
 
  {"type": "bullets", "title": "The test lifecycle", "kicker": "Under the hood",
   "bullets": [
@@ -266,19 +268,59 @@ SLIDES = [
            "compute nodes often have no internet) and reused, which is why demos show BUILD_REUSED."},
 
  {"type": "code", "title": "Anatomy of a test (YAML)", "kicker": "Concepts",
-  "intro": "A trivial test: a name, a scheduler, and the commands to run.",
+  "intro": "A trivial test: a name, a scheduler + queue, and the commands to run.",
   "code":
-    "demo_pass_raw:\n"
-    "  summary: 'Trivial PASS via raw scheduler'\n"
-    "  scheduler: raw            # run locally, no batch system\n"
+    "demo_pass:\n"
+    "  summary: 'Trivial PASS via PBS'\n"
+    "  scheduler: pbs\n"
+    "  schedule:\n"
+    "    pbs:\n"
+    "      queue: workq          # submit to a PBS queue\n"
     "  run:\n"
     "    cmds:\n"
-    "      - 'echo \"hello from $(hostname)\" > demo.txt'\n"
-    "      - 'cat demo.txt'\n"
+    "      - 'echo \"hello from $(hostname)\"'\n"
     "\n"
     "# PASS/FAIL comes from the exit code of the last command.\n"
-    "# Address it as:  suite.test   ->   demo_echo.demo_pass_raw",
-  "notes": "Emphasize: the exit code decides PASS/FAIL."},
+    "# Address it as:  suite.test   ->   demo_pbs.pass",
+  "notes": "Emphasize: the exit code decides PASS/FAIL. It's dispatched to PBS (queue workq)."},
+
+ {"type": "bullets", "title": "Inheritable test definitions", "kicker": "A big one",
+  "bullets": [
+    "Write shared config once in a base test — scheduler, build, run, parsing.",
+    "Other tests just say  inherits_from: <base>  and get all of it for free.",
+    "Each one overrides only what changes — no copy-paste, no drift.",
+    "Fix the base once → every test that inherits it updates.",
+  ],
+  "notes": "Huge selling point. Real suites share tons of config (same build, same scheduler "
+           "settings). Inheritance = write it once, variants override just the delta. Less code, "
+           "less drift, one place to fix things."},
+
+ {"type": "code", "title": "Inheritance in action", "kicker": "A big one",
+  "code_size": 13.5, "code_h": 5.0,
+  "code":
+    "base:                          # shared config lives here, once\n"
+    "  scheduler: pbs\n"
+    "  schedule: {pbs: {queue: workq, nodes: 1}}\n"
+    "  build:\n"
+    "    source_path: stream.c\n"
+    "    cmds: ['gcc -O3 -fopenmp stream.c -o stream']\n"
+    "  run:\n"
+    "    cmds: ['./stream']\n"
+    "\n"
+    "small:\n"
+    "  inherits_from: base\n"
+    "  variables: {threads: 1}                 # override just this\n"
+    "\n"
+    "large:\n"
+    "  inherits_from: base\n"
+    "  schedule: {pbs: {nodes: 4}}             # override the node count\n"
+    "\n"
+    "debug:\n"
+    "  inherits_from: base\n"
+    "  build: {cmds: ['gcc -O0 -g stream.c -o stream']}   # override the build",
+  "notes": "One base, three variants — each inherits_from base and overrides only its delta "
+           "(threads, node count, build flags). Verified live: a child inherits the parent's PBS "
+           "scheduler and overrides its own variables. The DRY win."},
 
  {"type": "code", "title": "A fuller test (YAML)", "kicker": "Concepts",
   "intro": "Same shape, more of it — variables, PBS + a queue, and build → run → parse → evaluate.",
@@ -323,15 +365,17 @@ SLIDES = [
  {"type": "demo", "title": "Your whole run history — searchable", "level": "RECORDS",
   "run": "11-history.sh",
   "steps": [
-    {"cmd": "pav status all -F failed              # every failed run, all the way back",
-     "out": "s49.1   FAIL   demo_echo.demo_fail_raw       14:57\n"
-            "s44.2   FAIL   opensearch_verify.os_fail     13:57\n"
-            "s33.2   FAIL   demo_echo.demo_fail_raw       Apr 26"},
-    {"cmd": "pav status all -F 'name=demo_echo.demo_metrics'    # one test, every run",
-     "out": "s52.1   PASS   demo_echo.demo_metrics    15:00\n"
-            "s47.1   PASS   demo_echo.demo_metrics    14:56"},
-    {"cmd": "pav status all -F 'name=demo_echo.demo_fail_raw and failed'   # combine filters",
-     "out": "s49.1   FAIL   demo_echo.demo_fail_raw    14:57"},
+    {"cmd": "pav status all -F failed                    # every failed run, all the way back",
+     "out": "s70.2   FAIL   demo_pbs.fail              16:40\n"
+            "s75.2   FAIL   opensearch_verify.os_fail  16:44\n"
+            "s23.71  FAIL   sim_tests.sim_fail_01      Apr 18"},
+    {"cmd": "pav status all -F 'name=demo_pbs.metrics'   # one test, every run",
+     "out": "s71.1   PASS   demo_pbs.metrics    16:40\n"
+            "s67.2   PASS   demo_pbs.metrics    16:32\n"
+            "s57.1   PASS   demo_pbs.metrics    16:28"},
+    {"cmd": "pav status all -F 'name=demo_pbs.fail and failed'   # combine filters",
+     "out": "s70.2   FAIL   demo_pbs.fail    16:40\n"
+            "s56.2   FAIL   demo_pbs.fail    16:27"},
   ],
   "caption": "Every run is kept. 'all' searches the full history; -F filters — and combines — by result, name, date…",
   "notes": "Pavilion records every test run persistently. 'pav status all' searches the whole history "
@@ -340,25 +384,27 @@ SLIDES = [
 
  {"type": "demo", "title": "Basics: PASS and FAIL", "level": "L1", "run": "01-basic.sh",
   "steps": [
-    {"cmd": "pav run demo_echo.demo_pass_raw demo_echo.demo_fail_raw",
-     "out": "created 2 tests, 0 errors.  Kicked off series s36."},
-    {"cmd": "pav status s36",
-     "out": "s36.1  COMPLETE  PASS  demo_echo.demo_pass_raw\n"
-            "s36.2  COMPLETE  FAIL  demo_echo.demo_fail_raw"},
-    {"cmd": "pav results s36",
-     "out": "Test Results: s36\n"
-            " s36.1 | demo_echo.demo_pass_raw | PASS\n"
-            " s36.2 | demo_echo.demo_fail_raw | FAIL   (exit 7, on purpose)"},
+    {"cmd": "pav run demo_pbs.pass demo_pbs.fail          # two PBS jobs",
+     "out": "sid: s70\ntests: 2"},
+    {"cmd": "qstat -a                                     # yes — it went through the scheduler",
+     "out": "Job ID          Username Queue Jobname    NDS TSK S\n"
+            "8383.pbs-server pavilion workq pav_demo_*   1   1 R"},
+    {"cmd": "pav status s70",
+     "out": "s70.1 | 8383_pbs-server | demo_pbs.pass | COMPLETE | PASS\n"
+            "s70.2 | 8383_pbs-server | demo_pbs.fail | COMPLETE | FAIL"},
   ],
-  "caption": "Run a suite, check status, read results. FAIL is intentional (exit 7).",
-  "notes": "Two tests from one 'pav run'; PASS vs FAIL is purely the exit code."},
+  "caption": "Submit two PBS jobs, prove dispatch with qstat, read the results. FAIL is intentional (exit 7).",
+  "notes": "Two tests from one 'pav run', both submitted to PBS (qstat proves it). PASS vs FAIL is "
+           "purely the exit code. Running the PBS test also proves the scheduler itself works."},
 
  {"type": "section", "title": "Getting data out", "kicker": "Result parsing"},
  {"type": "code", "title": "Result parsing", "kicker": "Results",
   "intro": "Regex parsers pull values out of the test's output into structured results.",
   "code":
-    "demo_metrics:\n"
-    "  scheduler: raw\n"
+    "metrics:\n"
+    "  scheduler: pbs\n"
+    "  schedule:\n"
+    "    pbs: { queue: workq, nodes: 1, walltime: '00:02:00' }\n"
     "  run:\n"
     "    cmds:\n"
     "      - 'echo \"throughput 123.45\"'\n"
@@ -372,12 +418,14 @@ SLIDES = [
 
  {"type": "demo", "title": "Parsed metrics in results", "level": "L2", "run": "02-metrics.sh",
   "steps": [
-    {"cmd": "pav run demo_echo.demo_metrics",
-     "out": "Kicked off series s37."},
-    {"cmd": "pav status s37",
-     "out": "s37.1  COMPLETE  PASS  demo_echo.demo_metrics"},
-    {"cmd": "pav results --full s37",
-     "out": "  'throughput_mbs': 123.45,\n"
+    {"cmd": "pav run demo_pbs.metrics",
+     "out": "sid: s71\ntests: 1"},
+    {"cmd": "qstat -a                         # dispatched to PBS",
+     "out": "8384.pbs-server pavilion workq pav_demo_*  1  1  R"},
+    {"cmd": "pav results --full s71",
+     "out": "  'name': 'demo_pbs.metrics',\n"
+            "  'result': 'PASS',\n"
+            "  'throughput_mbs': 123.45,\n"
             "  'latency_ms': 5.6,\n"
             "  'errors': 0,"},
   ],
@@ -389,7 +437,9 @@ SLIDES = [
   "intro": "permute_on + variable lists generate one test instance per combination.",
   "code":
     "matrix:\n"
-    "  scheduler: raw\n"
+    "  scheduler: pbs\n"
+    "  schedule:\n"
+    "    pbs: { queue: workq, nodes: 1, walltime: '00:02:00' }\n"
     "  permute_on: [size, mode]\n"
     "  variables:\n"
     "    size: ['small', 'medium', 'large']\n"
@@ -405,17 +455,19 @@ SLIDES = [
  {"type": "demo", "title": "Permutations expand", "level": "L3", "run": "03-permutations.sh",
   "steps": [
     {"cmd": "pav run demo_perms.matrix",
-     "out": "Test set 'demo_perms.matrix' created 6 tests, 0 errors."},
-    {"cmd": "pav status s46",
-     "out": "s46.1  PASS  demo_perms.matrix.small-read\n"
-            "s46.2  PASS  demo_perms.matrix.medium-read\n"
-            "s46.3  PASS  demo_perms.matrix.large-read\n"
-            "s46.4  PASS  demo_perms.matrix.small-write\n"
-            "s46.5  PASS  demo_perms.matrix.medium-write\n"
-            "s46.6  PASS  demo_perms.matrix.large-write"},
+     "out": "Test set 'demo_perms.matrix' created 6 tests, skipped 0, 0 errors.\nsid: s72"},
+    {"cmd": "qstat -a                        # all six ride one PBS job",
+     "out": "8385.pbs-server pavilion workq pav_demo_*  1  1  R"},
+    {"cmd": "pav status s72",
+     "out": "s72.1  PASS  demo_perms.matrix.small-read\n"
+            "s72.2  PASS  demo_perms.matrix.medium-read\n"
+            "s72.3  PASS  demo_perms.matrix.large-read\n"
+            "s72.4  PASS  demo_perms.matrix.small-write\n"
+            "s72.5  PASS  demo_perms.matrix.medium-write\n"
+            "s72.6  PASS  demo_perms.matrix.large-write"},
   ],
-  "caption": "One YAML block → six named test instances, all PASS.",
-  "notes": "Point out the auto-generated subtitles (size-mode)."},
+  "caption": "One YAML block → six named PBS test instances, all PASS.",
+  "notes": "Point out the auto-generated subtitles (size-mode). All six went through PBS (qstat)."},
 
  {"type": "section", "title": "Schedulers", "kicker": "Running at scale"},
  {"type": "bullets", "title": "Schedulers & the PBS plugin", "kicker": "Schedulers",
@@ -429,7 +481,8 @@ SLIDES = [
 
  {"type": "code", "title": "A PBS test", "kicker": "Schedulers",
   "code":
-    "demo_pass_pbs:\n"
+    "# demo_pbs.yaml  ->  address it as  demo_pbs.pass\n"
+    "pass:\n"
     "  scheduler: pbs\n"
     "  schedule:\n"
     "    pbs:\n"
@@ -440,18 +493,18 @@ SLIDES = [
     "  run:\n"
     "    cmds:\n"
     "      - 'echo \"pbs job on $(hostname)\"'",
-  "notes": "schedule.pbs maps to #PBS resource requests via our plugin."},
+  "notes": "schedule.pbs maps to #PBS resource requests via our plugin. Addressed as demo_pbs.pass."},
 
  {"type": "demo", "title": "Submit to PBS", "level": "L4", "run": "04-pbs.sh",
   "steps": [
-    {"cmd": "pav run demo_echo.demo_pass_pbs",
-     "out": "Kicked off series s39."},
-    {"cmd": "pav status s39           # Pavilion: it's running",
-     "out": "s39.1 | 8372_pbs-server | demo_echo.demo_pass_pbs | RUNNING"},
+    {"cmd": "pav run demo_pbs.pass",
+     "out": "sid: s76\ntests: 1"},
+    {"cmd": "pav status s76           # Pavilion: it's running",
+     "out": "s76.1 | 8390_pbs-server | demo_pbs.pass | RUNNING"},
     {"cmd": "qstat -a                 # PBS: the same job, state R",
-     "out": "8372.pbs-server  pavilion  workq  pav_demo_*  1  1  R  00:00"},
-    {"cmd": "pav results s39          # once it finishes",
-     "out": "s39.1 | demo_echo.demo_pass_pbs | COMPLETE | PASS"},
+     "out": "8390.pbs-server  pavilion  workq  pav_demo_*  1  1  R"},
+    {"cmd": "pav results s76          # once it finishes",
+     "out": "s76.1 | demo_pbs.pass | COMPLETE | PASS"},
   ],
   "caption": "Submitted → running (seen in Pavilion AND PBS) → PASS on a compute node.",
   "notes": "The running step shows the same job in both Pavilion (RUNNING) and PBS (state R). "
@@ -467,29 +520,79 @@ SLIDES = [
   ],
   "notes": "Modes = reuse. One test, many contexts."},
 
+ {"type": "code", "title": "A mode file", "kicker": "Modes",
+  "intro": "prod.yaml — just the config keys you want merged on top of a resolved test.",
+  "code":
+    "# config/modes/prod.yaml\n"
+    "# Apply with:  pav run -m prod <test>\n"
+    "variables:\n"
+    "  env_label: 'production'",
+  "notes": "A mode is tiny — here it overrides one variable. Modes can also swap queues, "
+           "bump resources, toggle features. No test edits required."},
+
  {"type": "demo", "title": "A mode overrides config", "level": "L5", "run": "05-modes.sh",
   "steps": [
-    {"cmd": "pav show modes",
-     "out": "prod"},
-    {"cmd": "pav run demo_modes.mode_demo        # plain",
-     "out": "'label': 'default'"},
-    {"cmd": "pav run -m prod demo_modes.mode_demo # with mode",
-     "out": "'label': 'production'"},
+    {"cmd": "pav run -m prod demo_modes.mode_demo    # apply the prod overlay",
+     "out": "sid: s73\ntests: 1"},
+    {"cmd": "qstat -a                                # dispatched to PBS",
+     "out": "8386.pbs-server pavilion workq pav_demo_*  1  1  R"},
+    {"cmd": "pav results --full s73",
+     "out": "  'name': 'demo_modes.mode_demo',\n"
+            "  'label': 'production',\n"
+            "  'var': {'env_label': 'production'}"},
   ],
-  "caption": "Same test — the `prod` mode overlay changed the parsed result.",
-  "notes": "The label result is the proof. Modes merge on top of the resolved test."},
+  "caption": "Plain, env_label is 'default'; with `-m prod` the overlay flips it to 'production'.",
+  "notes": "The label result is the proof — a plain run parses 'default', the prod mode merges "
+           "env_label: production on top. Modes merge onto the fully-resolved test."},
 
  {"type": "section", "title": "Series", "kicker": "Grouping runs"},
+ {"type": "code", "title": "A series file", "kicker": "Series",
+  "intro": "demo_series.yaml — name a few test sets; each set lists the tests it runs.",
+  "code":
+    "# config/series/demo_series.yaml\n"
+    "ordered: False\n"
+    "test_sets:\n"
+    "  smoke:  { tests: [demo_pbs.pass] }\n"
+    "  perf:   { tests: [demo_pbs.metrics] }",
+  "notes": "Sets can be ordered or not; unordered runs them concurrently (robust for a live demo). "
+           "Each set becomes its own PBS job."},
+
  {"type": "demo", "title": "Run a whole group", "level": "L6", "run": "06-series.sh",
   "steps": [
     {"cmd": "pav series run demo_series",
-     "out": "Started series s43   (sets: smoke + metrics + matrix)"},
-    {"cmd": "pav series list",
-     "out": "Sid | Name        | State    | Tests | Pass | Fail\n"
-            "s43 | demo_series | COMPLETE |   8   |   8  |   0"},
+     "out": "Created Test Series demo_series.\nStarted series s74."},
+    {"cmd": "qstat -a                        # one PBS job per test set",
+     "out": "8387.pbs-server pavilion workq pav_demo_*  1  1  R\n"
+            "8388.pbs-server pavilion workq pav_demo_*  1  1  R"},
+    {"cmd": "pav series status s74",
+     "out": "Id  | Name        | Status   | Tests | Pass | Fail\n"
+            "s74 | demo_series | COMPLETE |   2   |   2  |   0"},
   ],
-  "caption": "One command runs several test sets as a named series — 8 tests, all PASS.",
-  "notes": "Series group test sets. (I use unordered for a robust live run.)"},
+  "caption": "One command runs both test sets as a named series — two PBS jobs, all PASS.",
+  "notes": "Series group test sets; each set here dispatches its own PBS job (qstat shows two). "
+           "I use unordered for a robust live run."},
+
+ {"type": "section", "title": "Results", "kicker": "Reading & scripting"},
+ {"type": "demo", "title": "Results: human and machine", "level": "RESULTS", "run": None,
+  "out_size": 11,
+  "steps": [
+    {"cmd": "pav results s71                     # a clean table for humans",
+     "out": " Test Results: s71.\n"
+            " Id    | Name             | Started  | Result\n"
+            " s71.1 | demo_pbs.metrics | 16:40:44 | PASS"},
+    {"cmd": "pav results --json s71              # the same run, for scripting",
+     "out": "{\n"
+            "  \"name\": \"demo_pbs.metrics\",\n"
+            "  \"result\": \"PASS\",\n"
+            "  \"throughput_mbs\": 123.45,\n"
+            "  \"latency_ms\": 5.6,\n"
+            "  \"errors\": 0,\n"
+            "  \"duration\": 0.041\n"
+            "}"},
+  ],
+  "caption": "Same results, two shapes: a table to read, JSON to pipe into jq / a script / a logger.",
+  "notes": "Point out that every parsed field (throughput_mbs, latency_ms…) is in the JSON — that's what "
+           "feeds the result loggers next. --json (or -j) is how you script against Pavilion."},
 
  {"type": "section", "title": "Plugins", "kicker": "Extending Pavilion"},
  {"type": "bullets", "title": "Pavilion is plugins all the way down", "kicker": "Plugins",
@@ -517,14 +620,30 @@ SLIDES = [
     {"cmd": "pav hello --name Team",
      "out": "Hello, Team!  Welcome to Pavilion 2!"},
     {"cmd": "pav recent -n 3",
-     "out": "[s46.6] demo_perms.matrix.large-write   PASS\n"
-            "[s46.4] demo_perms.matrix.small-write   PASS\n"
-            "[s46.1] demo_perms.matrix.small-read    PASS"},
+     "out": "[s75.4] opensearch_verify.os_version_tag.v1.0-verify   PASS\n"
+            "[s75.3] opensearch_verify.os_with_metrics             PASS\n"
+            "[s75.2] opensearch_verify.os_fail                     FAIL"},
     {"cmd": "pav test-summary",
-     "out": "PASS: 30    FAIL: 3    TOTAL: 33"},
+     "out": "PASS: 74    FAIL: 8    TOTAL: 83"},
   ],
   "caption": "New pav subcommands — our own tooling built on Pavilion's plugin API.",
   "notes": "recent/test-summary read Pavilion's own run database via cmd_utils."},
+
+ {"type": "demo", "title": "Disk usage at a glance", "level": "L7 · disk-usage", "run": "07-command-plugins.sh",
+  "steps": [
+    {"cmd": "pav disk-usage        # our command plugin: where the space goes",
+     "out": "Config Area: main\n"
+            "  Working Dir: /home/pavilion/pavilion2/working_dir\n"
+            "  Test Runs:     4.42 MB\n"
+            "  Builds:       59.77 MB\n"
+            "\n"
+            "Series:          16.84 MB\n"
+            "------------------------------------------------------------\n"
+            "TOTAL USAGE:    145.22 MB"},
+  ],
+  "caption": "Another command plugin — a quick accounting of what test runs, builds, and series consume.",
+  "notes": "disk-usage walks Pavilion's working dir and totals runs / builds / series. Handy for spotting "
+           "when old builds need a 'pav clean'. Same plugin API as hello/recent/test-summary."},
 
  {"type": "bullets", "title": "Result loggers (ours)", "kicker": "Custom output",
   "bullets": [
@@ -539,45 +658,46 @@ SLIDES = [
  {"type": "demo", "title": "Output plugin: CSV", "level": "L8", "run": "08-output-csv.sh",
   "out_size": 11.5,
   "steps": [
-    {"cmd": "pav run demo_echo.demo_pass_pbs      # a real PBS job",
-     "out": "Kicked off series s55."},
-    {"cmd": "qstat -a                             # yes — it went through the scheduler",
-     "out": "8373.pbs-server  pavilion  workq  pav_demo_*  1  1  R  00:00"},
-    {"cmd": "tail /home/pavilion/pav_logs/results.csv   # csv_file logger: one row per test",
-     "out": "name,id,result,duration, ... ,permute_on,extra\n"
-            "demo_echo.demo_pass_pbs,s55.1,PASS,1.4, ... ,{},{}\n"
-            "demo_metrics,s43.2,PASS,0.138, ... ,{},{\"throughput_mbs\":123.45}"},
+    {"cmd": "pav run demo_pbs.pass demo_pbs.metrics      # real PBS jobs",
+     "out": "sid: s74\ntests: 2"},
+    {"cmd": "qstat -a                                    # yes — it went through the scheduler",
+     "out": "8387.pbs-server  pavilion  workq  pav_demo_*  1  1  R"},
+    {"cmd": "tail ~/pav_logs/results.csv                 # csv_file logger: one row per test",
+     "out": "name,id,result,sys_name,user, ... ,duration\n"
+            "demo_pbs.pass,s74.1,PASS,pbs-server,pavilion, ... ,0.043\n"
+            "demo_pbs.metrics,s74.2,PASS,pbs-server,pavilion, ... ,0.040"},
   ],
   "caption": "A real PBS job (qstat proves dispatch), then the csv_file logger writes one row per test.",
-  "notes": "The CSV page also shows scheduler dispatch — demo_pass_pbs is a real PBS job (qstat) — then the "
-           "csv_file logger records it. Parsed metrics land in 'extra', permute vars in 'permute_on'."},
+  "notes": "The CSV page also shows scheduler dispatch — these are real PBS jobs (qstat) — then the "
+           "csv_file logger records one row per test. Parsed metrics land in 'extra', permute vars in 'permute_on'."},
 
  {"type": "demo", "title": "Output plugin: saLog", "level": "saLog", "run": "12-salog.sh",
   "steps": [
-    {"cmd": "cat saLog        # our emulator — flags:  -n node  -c content  -u user  -a action",
-     "out": "while getopts \"n:c:u:a:\" opt; do\n"
-            "  case $opt in n) n=$OPTARG;; c) c=$OPTARG;; u) u=$OPTARG;; a) a=$OPTARG;; esac\n"
-            "done\n"
-            "echo \"$n,\\\"$c\\\",$u,$a\" >> salog_output.txt"},
-    {"cmd": "tail salog_output.txt        # writes CSV, just like the csv_file logger",
+    {"cmd": "pav run demo_pbs.pass demo_pbs.fail    # 1. run in Pavilion",
+     "out": "sid: s70\ntests: 2"},
+    {"cmd": "qstat -a                               # 2. the jobs, running in PBS",
+     "out": "8383.pbs-server pavilion workq pav_demo_*  1  1  R"},
+    {"cmd": "tail salog_output.txt                  # 3. the CSV saLog wrote on release",
      "out": "x1003c7s7b0n3,\"pav_test result=PASS\",pavilion,released\n"
-            "x1003c7s7b0n1,...,x1003c7s7b0n3,\"pav_test result=FAIL\",pavilion,released"},
+            "x1003c7s7b0n1,x1003c7s7b0n2,x1003c7s7b0n3,\"pav_test result=FAIL\",pavilion,released"},
   ],
-  "caption": "saLog — a NASA/NOAA-internal logger. Pavilion's plugin calls it on 'released'; it appends CSV.",
-  "notes": "saLog is a logger specific to us (NASA/NOAA); it just writes CSV, so its output looks like the "
-           "csv_file logger's. This is our emulation script on pbs-server — flags -n/-c/-u/-a. Pavilion's "
-           "sa_log result plugin invokes it with action='released'."},
+  "caption": "Run in Pavilion → jobs in PBS → saLog writes a CSV row as each node is released.",
+  "notes": "saLog is a logger specific to us (NASA/NOAA). Pavilion's sa_log result plugin invokes it as "
+           "nodes are released from the PBS job — one CSV row per node, with the test result. It writes "
+           "node(s), content (result), user, and the 'released' action."},
 
  {"type": "demo", "title": "Output plugin: OpenSearch → Grafana", "level": "L9", "run": "09-opensearch.sh",
   "steps": [
-    {"cmd": "pav run opensearch_verify",
-     "out": "Kicked off series s44   (ships each result to OpenSearch)"},
+    {"cmd": "pav run -m pbs opensearch_verify        # 4 tests via PBS; each result → OpenSearch",
+     "out": "created 4 tests, skipped 0, 0 errors.\nsid: s75"},
+    {"cmd": "qstat -a                                # through the scheduler",
+     "out": "8389.pbs-server pavilion workq pav_opens*  1  1  R"},
     {"cmd": "python3 ~/opensearch_results.py --name opensearch_verify",
      "out": "pav_id   name                                          result\n"
-            "s44.1    opensearch_verify.os_pass                     PASS\n"
-            "s44.2    opensearch_verify.os_fail                     FAIL\n"
-            "s44.3    opensearch_verify.os_with_metrics             PASS\n"
-            "s44.4    opensearch_verify.os_version_tag.v1.0-verify  PASS"},
+            "s75.1    opensearch_verify.os_pass                     PASS\n"
+            "s75.2    opensearch_verify.os_fail                     FAIL\n"
+            "s75.3    opensearch_verify.os_with_metrics             PASS\n"
+            "s75.4    opensearch_verify.os_version_tag.v1.0-verify  PASS"},
   ],
   "caption": "Shipped to OpenSearch, read back from the index — then on to Grafana dashboards.",
   "notes": "Run the suite, query the index to prove indexing, then open Grafana "
@@ -585,13 +705,17 @@ SLIDES = [
 
  {"type": "demo", "title": "Output plugin: MySQL", "level": "L10", "run": "10-mysql.sh",
   "steps": [
-    {"cmd": "pav run demo_echo.demo_metrics     # every logger fires, incl. mysql",
-     "out": "Kicked off series s47."},
-    {"cmd": "mysql pavilion -e 'SELECT pav_id,name,result,dur FROM results ...'",
-     "out": "pav_id   name                      result   dur\n"
-            "s48.1    demo_echo.demo_pass_raw    PASS     0.076\n"
-            "s49.1    demo_echo.demo_fail_raw    FAIL     0.045\n"
-            "s47.1    demo_echo.demo_metrics     PASS     0.077"},
+    {"cmd": "pav run demo_pbs.metrics          # every logger fires, incl. mysql",
+     "out": "sid: s71\ntests: 1"},
+    {"cmd": "qstat -a                          # a real PBS job",
+     "out": "8384.pbs-server pavilion workq pav_demo_*  1  1  R"},
+    {"cmd": "mysql pavilion -e 'SELECT pav_id,name,result,sys_name,ROUND(duration,3) dur\n"
+            "                    FROM results ORDER BY logged_at DESC LIMIT 4'",
+     "out": "pav_id  name                  result  sys_name    dur\n"
+            "s74.2   demo_pbs.metrics      PASS    pbs-server  0.040\n"
+            "s74.1   demo_pbs.pass         PASS    pbs-server  0.043\n"
+            "s73.1   demo_modes.mode_demo  PASS    pbs-server  0.040\n"
+            "s72.3   demo_perms.matrix...  PASS    pbs-server  0.040"},
   ],
   "caption": "A result logger we wrote — every result lands in a MySQL table (passwordless local auth).",
   "notes": "Built with pymysql; connects via unix_socket so there's NO password in pavilion.yaml. "

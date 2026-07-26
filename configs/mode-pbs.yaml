@@ -1,0 +1,3 @@
+# Apply with `-m pbs` to run any test through the PBS scheduler.
+scheduler: pbs
+schedule: {pbs: {queue: workq, nodes: 1, walltime: '00:02:00'}}

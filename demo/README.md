@@ -1,7 +1,8 @@
 # Run-of-show — Pavilion workshop demos
 
-Everything below is **verified working** on the cluster (2026-07-26). Nine demos, each a
-one-command script. The deck (`../pavilion-workshop.pptx`) has a slide + speaker notes per demo.
+Everything below is **verified working** on the cluster (2026-07-26). Each demo is a
+one-command script; every `pav run` goes through PBS and is followed by `qstat -a`.
+The deck (`../pavilion-workshop.pptx`) has a slide + speaker notes per demo.
 
 ## Before you start (once, at the podium)
 
@@ -21,25 +22,29 @@ Tips:
 
 ## The ladder
 
+Every `pav run` below is a **PBS job** — each demo does `pav run …` then `qstat -a` to prove the
+scheduler dispatched it. (Running a PBS test also proves PBS itself works.)
+
 | # | Script | Shows | One-liner if you'd rather type it |
 |---|--------|-------|-----------------------------------|
-| L1 | `./01-basic.sh` | PASS + intentional FAIL (raw) | `pav run demo_echo.demo_pass_raw demo_echo.demo_fail_raw` |
-| L2 | `./02-metrics.sh` | result parsing → numbers | `pav run demo_echo.demo_metrics` then `pav results --full <sid>` |
-| L3 | `./03-permutations.sh` | 1 config → 6 tests | `pav run demo_perms.matrix` |
-| L4 | `./04-pbs.sh` | PBS submit; **running** in pav + PBS; result | `pav run demo_echo.demo_pass_pbs` → `pav status <sid>` + `qstat -a` → `pav results <sid>` |
-| L5 | `./05-modes.sh` | mode overrides a var | `pav run -m prod demo_modes.mode_demo` |
-| L6 | `./06-series.sh` | run a group | `pav series run demo_series` |
+| L1 | `./01-basic.sh` | PASS + intentional FAIL (PBS) | `pav run demo_pbs.pass demo_pbs.fail` → `qstat -a` |
+| L2 | `./02-metrics.sh` | result parsing → numbers | `pav run demo_pbs.metrics` → `qstat -a` → `pav results --full <sid>` |
+| L3 | `./03-permutations.sh` | 1 config → 6 PBS tests | `pav run demo_perms.matrix` → `qstat -a` |
+| L4 | `./04-pbs.sh` | PBS submit; **running** in pav + PBS; result | `pav run demo_pbs.pass` → `pav status <sid>` + `qstat -a` → `pav results <sid>` |
+| L5 | `./05-modes.sh` | mode overrides a var | `pav run -m prod demo_modes.mode_demo` → `qstat -a` |
+| L6 | `./06-series.sh` | run a group (one PBS job per set) | `pav series run demo_series` → `qstat -a` |
 | L7 | `./07-command-plugins.sh` | your command plugins | `pav hello` / `pav recent` / `pav test-summary` / `pav disk-usage` |
-| L8 | `./08-output-csv.sh` | csv_file logger | `tail /home/pavilion/pav_logs/results.csv` |
-| L9 | `./09-opensearch.sh` | opensearch logger → index → Grafana | `pav run opensearch_verify` then `python3 ~/opensearch_results.py --name opensearch_verify` |
-| L10 | `./10-mysql.sh` | mysql logger → MySQL table | `pav run demo_echo.demo_metrics` then `mysql pavilion -e "SELECT pav_id,name,result,ROUND(duration,3) dur FROM results ORDER BY logged_at DESC LIMIT 5"` |
+| L8 | `./08-output-csv.sh` | csv_file logger | `pav run demo_pbs.pass demo_pbs.metrics` → `qstat -a` → `tail ~/pav_logs/results.csv` |
+| L9 | `./09-opensearch.sh` | opensearch logger → index → Grafana | `pav run -m pbs opensearch_verify` → `qstat -a` → `python3 ~/opensearch_results.py --name opensearch_verify` |
+| L10 | `./10-mysql.sh` | mysql logger → MySQL table | `pav run demo_pbs.metrics` → `qstat -a` → `mysql pavilion -e "SELECT pav_id,name,result,sys_name,ROUND(duration,3) dur FROM results ORDER BY logged_at DESC LIMIT 5"` |
+| saLog | `./12-salog.sh` | saLog CSV logger (run → PBS → CSV) | `pav run demo_pbs.pass demo_pbs.fail` → `qstat -a` → `tail salog_output.txt` |
 
 Then open **Grafana**: `http://<your-grafana-host>:3000`.
 
 ## Gotchas / fallbacks
 
 - **L4 (PBS) timing:** run `pav run …` then *immediately* `qstat -a` to catch the job before it finishes.
-- **L6 (series):** uses `ordered: False` on purpose — ordered series need a background manager and can stall.
+- **L6 (series):** two sets (`smoke` + `perf`), `ordered: False` on purpose — ordered series need a background manager and can stall. Run it **on its own**, not immediately after another heavy run, and give it ~30s to reach COMPLETE.
 - **L9:** if `OS_PASS` isn't set, the query errors. The 08-output-csv demo is a safe fallback if OpenSearch is unhappy.
 - **L10 (MySQL):** MariaDB must be running on pbs-server (`systemctl status mariadb`). The `mysql` CLI as the `pavilion` user auths via unix_socket (no password). The logger is **non-fatal** — if MySQL is down, other demos still pass (results just skip the MySQL row).
 - **⚠️ Do NOT display `pavilion.yaml` on screen** — it contains a plaintext OpenSearch password. Use the deck's redacted version.

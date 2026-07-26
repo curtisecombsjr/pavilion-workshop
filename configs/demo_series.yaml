@@ -1,17 +1,5 @@
-# demo_series -> deploys to config/series/demo_series.yaml
-# Groups several test SETS and runs them with one command:  pav series run demo_series
-# Total: 1 (smoke) + 1 (metrics) + 6 (matrix permutations) = 8 tests.
-# ordered:False launches all sets together (robust for a live demo).
-
+# demo_series: groups PBS test sets; run with `pav series run demo_series`.
 ordered: False
 test_sets:
-  smoke:
-    tests:
-      - demo_echo.demo_pass_raw
-  metrics:
-    tests:
-      - demo_echo.demo_metrics
-  matrix:
-    tests:
-      - demo_perms.matrix
-repeat: 1
+  smoke:   {tests: [demo_pbs.pass]}
+  perf:    {tests: [demo_pbs.metrics]}

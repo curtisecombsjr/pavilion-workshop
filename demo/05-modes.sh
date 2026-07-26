@@ -7,5 +7,7 @@ o1=$(pav --quiet run demo_modes.mode_demo); s1=$(echo "$o1" | grep -oE 's[0-9]+'
 pav --quiet results --full "$s1" 2>&1 | grep -oE "'label': '[^']*'" | head -1
 pause
 say "pav --quiet run -m prod demo_modes.mode_demo    # with mode -> label=production"
-o2=$(pav --quiet run -m prod demo_modes.mode_demo); s2=$(echo "$o2" | grep -oE 's[0-9]+' | head -1); pav --quiet wait "$s2" >/dev/null 2>&1
+o2=$(pav --quiet run -m prod demo_modes.mode_demo); s2=$(echo "$o2" | grep -oE 's[0-9]+' | head -1)
+qstat_show   # the mode still runs through PBS
+pav --quiet wait "$s2" >/dev/null 2>&1
 pav --quiet results --full "$s2" 2>&1 | grep -oE "'label': '[^']*'" | head -1

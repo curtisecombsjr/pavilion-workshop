@@ -1,16 +1,12 @@
-# demo_perms: the permutations showcase.
-# One test definition + two variable lists => Pavilion generates one test instance
-# per combination (3 sizes x 2 modes = 6 tests), each with its own subtitle.
-# Raw scheduler so it runs instantly with no PBS wait.
-
+# demo_perms: permutations, now submitted as PBS jobs (one job per instance).
 matrix:
-  summary: 'One config expands into many tests via permutations'
-  scheduler: raw
+  summary: 'One config expands into many PBS tests via permutations'
+  scheduler: pbs
+  schedule: {pbs: {queue: workq, nodes: 1, walltime: '00:02:00'}}
   permute_on: [size, mode]
   variables:
     size: ['small', 'medium', 'large']
     mode: ['read', 'write']
   subtitle: '{{size}}-{{mode}}'
   run:
-    cmds:
-      - 'echo "size={{size}} mode={{mode}} host=$(hostname)"'
+    cmds: ['echo "size={{size}} mode={{mode}} host=$(hostname)"']
