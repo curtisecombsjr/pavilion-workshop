@@ -1,0 +1,5 @@
+# Mode file -> deploys to config/modes/prod.yaml
+# A mode is just config keys merged on top of the fully-resolved test.
+# Apply with:  pav run -m prod <test>
+variables:
+  env_label: 'production'

@@ -1,0 +1,16 @@
+# demo_perms: the permutations showcase.
+# One test definition + two variable lists => Pavilion generates one test instance
+# per combination (3 sizes x 2 modes = 6 tests), each with its own subtitle.
+# Raw scheduler so it runs instantly with no PBS wait.
+
+matrix:
+  summary: 'One config expands into many tests via permutations'
+  scheduler: raw
+  permute_on: [size, mode]
+  variables:
+    size: ['small', 'medium', 'large']
+    mode: ['read', 'write']
+  subtitle: '{{size}}-{{mode}}'
+  run:
+    cmds:
+      - 'echo "size={{size}} mode={{mode}} host=$(hostname)"'

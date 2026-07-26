@@ -1,0 +1,611 @@
+#!/usr/bin/env python3
+"""
+Build the Pavilion workshop deck as a .pptx (upload to Google Slides).
+
+Design goals: SIMPLE and Google-Slides-safe — plain layouts, standard fonts
+(Arial / Consolas), no fancy positioning. Content lives in the SLIDES list below,
+so editing/adding/reordering is easy; re-run to regenerate.
+
+    ./.venv/bin/python build_deck.py        # -> pavilion-workshop.pptx
+
+Slide helpers: title / section / bullets / code / demo. Demo slides render a
+terminal TRANSCRIPT — each command ($ prompt) followed by its real output —
+from a `steps` list. Every slide can carry speaker notes (the `notes` key).
+"""
+from pptx import Presentation
+from pptx.util import Inches, Pt
+from pptx.dml.color import RGBColor
+from pptx.enum.text import PP_ALIGN, MSO_ANCHOR
+
+# ----------------------------------------------------------------------------- theme
+NAVY   = RGBColor(0x1F, 0x3B, 0x63)
+ACCENT = RGBColor(0x2E, 0x6D, 0xA4)
+INK    = RGBColor(0x21, 0x25, 0x2B)
+MUTED  = RGBColor(0x5B, 0x66, 0x74)
+CODEBG = RGBColor(0xF3, 0xF4, 0xF6)
+CODEINK= RGBColor(0x1B, 0x2B, 0x34)
+GREEN  = RGBColor(0x1E, 0x7D, 0x3C)
+RED    = RGBColor(0xB3, 0x2A, 0x2A)
+WHITE  = RGBColor(0xFF, 0xFF, 0xFF)
+LINE   = RGBColor(0xD5, 0xDA, 0xE0)
+
+BODY_FONT = "Arial"
+CODE_FONT = "Consolas"
+
+prs = Presentation()
+prs.slide_width = Inches(13.333)
+prs.slide_height = Inches(7.5)
+BLANK = prs.slide_layouts[6]
+SW, SH = prs.slide_width, prs.slide_height
+
+
+def _box(slide, l, t, w, h):
+    tb = slide.shapes.add_textbox(l, t, w, h)
+    tf = tb.text_frame
+    tf.word_wrap = True
+    return tb, tf
+
+
+def _set(run, text, size, color=INK, bold=False, font=BODY_FONT):
+    run.text = text
+    run.font.size = Pt(size)
+    run.font.color.rgb = color
+    run.font.bold = bold
+    run.font.name = font
+
+
+def _notes(slide, text):
+    if text:
+        slide.notes_slide.notes_text_frame.text = text
+
+
+def _titlebar(slide, title, kicker=None):
+    if kicker:
+        _, tf = _box(slide, Inches(0.6), Inches(0.35), Inches(8.4), Inches(0.4))
+        _set(tf.paragraphs[0].add_run(), kicker.upper(), 12, ACCENT, bold=True)
+    _, tf = _box(slide, Inches(0.6), Inches(0.7), Inches(12.1), Inches(0.9))
+    _set(tf.paragraphs[0].add_run(), title, 30, NAVY, bold=True)
+    ln = slide.shapes.add_shape(1, Inches(0.62), Inches(1.55), Inches(2.2), Pt(3))
+    ln.fill.solid(); ln.fill.fore_color.rgb = ACCENT; ln.line.fill.background()
+
+
+def title_slide(spec):
+    s = prs.slides.add_slide(BLANK)
+    bg = s.shapes.add_shape(1, 0, 0, SW, SH)
+    bg.fill.solid(); bg.fill.fore_color.rgb = NAVY; bg.line.fill.background()
+    _, tf = _box(s, Inches(0.9), Inches(2.4), Inches(11.5), Inches(2))
+    _set(tf.paragraphs[0].add_run(), spec["title"], 46, WHITE, bold=True)
+    p = tf.add_paragraph(); _set(p.add_run(), spec.get("subtitle", ""), 22, RGBColor(0xBF, 0xD3, 0xEA))
+    links = spec.get("links")
+    if links:
+        _, tfl = _box(s, Inches(0.95), Inches(3.75), Inches(11.5), Inches(0.5))
+        pl = tfl.paragraphs[0]
+        for i, (text, url) in enumerate(links):
+            if i:
+                _set(pl.add_run(), "    ·    ", 16, RGBColor(0x6F, 0x86, 0xA6))
+            # Plain text (no active hyperlink) so our light color sticks instead of the app's link-blue.
+            _set(pl.add_run(), text, 16, RGBColor(0x9F, 0xD0, 0xFF))
+    _, tf2 = _box(s, Inches(0.95), Inches(6.3), Inches(11), Inches(0.6))
+    _set(tf2.paragraphs[0].add_run(), spec.get("footer", ""), 14, RGBColor(0x9F, 0xB6, 0xD2))
+    _notes(s, spec.get("notes"))
+
+
+def section_slide(spec):
+    s = prs.slides.add_slide(BLANK)
+    bar = s.shapes.add_shape(1, 0, Inches(2.9), SW, Inches(1.7))
+    bar.fill.solid(); bar.fill.fore_color.rgb = RGBColor(0xEE, 0xF2, 0xF7); bar.line.fill.background()
+    _, tf = _box(s, Inches(0.8), Inches(3.1), Inches(11.7), Inches(1.3))
+    _set(tf.paragraphs[0].add_run(), spec.get("kicker", "SECTION").upper(), 13, ACCENT, bold=True)
+    p = tf.add_paragraph(); _set(p.add_run(), spec["title"], 36, NAVY, bold=True)
+    _notes(s, spec.get("notes"))
+
+
+def bullets_slide(spec):
+    s = prs.slides.add_slide(BLANK)
+    _titlebar(s, spec["title"], spec.get("kicker"))
+    _, tf = _box(s, Inches(0.7), Inches(1.85), Inches(12), Inches(5.2))
+    for i, b in enumerate(spec["bullets"]):
+        p = tf.paragraphs[0] if i == 0 else tf.add_paragraph()
+        p.space_after = Pt(10)
+        lvl = 0
+        if isinstance(b, tuple):
+            b, lvl = b
+        run = p.add_run()
+        bullet = ("    – " if lvl else "•  ") + b
+        _set(run, bullet, 20 if lvl == 0 else 17, INK if lvl == 0 else MUTED, bold=False)
+    _notes(s, spec.get("notes"))
+
+
+def code_slide(spec):
+    s = prs.slides.add_slide(BLANK)
+    _titlebar(s, spec["title"], spec.get("kicker"))
+    if spec.get("intro"):
+        _, tf = _box(s, Inches(0.7), Inches(1.75), Inches(12), Inches(0.5))
+        _set(tf.paragraphs[0].add_run(), spec["intro"], 16, MUTED)
+    top = Inches(2.35) if spec.get("intro") else Inches(1.95)
+    h = spec.get("code_h", 4.6)
+    box = s.shapes.add_shape(1, Inches(0.7), top, Inches(12), Inches(h))
+    box.fill.solid(); box.fill.fore_color.rgb = CODEBG
+    box.line.color.rgb = LINE; box.line.width = Pt(1)
+    tf = box.text_frame; tf.word_wrap = True
+    tf.vertical_anchor = MSO_ANCHOR.TOP
+    tf.margin_left = Inches(0.25); tf.margin_top = Inches(0.18)
+    for i, ln in enumerate(spec["code"].split("\n")):
+        p = tf.paragraphs[0] if i == 0 else tf.add_paragraph()
+        p.alignment = PP_ALIGN.LEFT
+        color = CODEINK
+        if ln.strip().startswith("#"):
+            color = MUTED
+        _set(p.add_run(), ln if ln else " ", spec.get("code_size", 14), color, font=CODE_FONT)
+    _notes(s, spec.get("notes"))
+
+
+def demo_slide(spec):
+    """A live-demo slide as a terminal transcript: each command ($ prompt) followed by its real
+    output, interleaved in one monospace box (kept sized to fit — no overflow)."""
+    s = prs.slides.add_slide(BLANK)
+    _titlebar(s, spec["title"], "LIVE DEMO · " + spec.get("level", ""))
+    # run-cue chip (top-right)
+    chip = s.shapes.add_shape(1, Inches(9.3), Inches(0.5), Inches(3.4), Inches(0.55))
+    chip.fill.solid(); chip.fill.fore_color.rgb = ACCENT; chip.line.fill.background()
+    ctf = chip.text_frame; ctf.word_wrap = True
+    _set(ctf.paragraphs[0].add_run(), "▶  " + spec["run"], 13, WHITE, bold=True)
+    ctf.paragraphs[0].alignment = PP_ALIGN.CENTER
+    # transcript box
+    box = s.shapes.add_shape(1, Inches(0.7), Inches(1.8), Inches(12), Inches(spec.get("box_h", 4.75)))
+    box.fill.solid(); box.fill.fore_color.rgb = CODEBG
+    box.line.color.rgb = LINE; box.line.width = Pt(1)
+    tf = box.text_frame; tf.word_wrap = True
+    tf.vertical_anchor = MSO_ANCHOR.TOP
+    tf.margin_left = Inches(0.25); tf.margin_top = Inches(0.16)
+    # flatten steps -> (text, kind)
+    lines = []
+    for i, step in enumerate(spec["steps"]):
+        if i > 0:
+            lines.append((" ", "blank"))
+        lines.append(("$ " + step["cmd"], "cmd"))
+        for ln in step.get("out", "").split("\n"):
+            lines.append((ln if ln else " ", "out"))
+    for i, (text, kind) in enumerate(lines):
+        p = tf.paragraphs[0] if i == 0 else tf.add_paragraph()
+        p.alignment = PP_ALIGN.LEFT
+        if kind == "cmd":
+            _set(p.add_run(), text, spec.get("cmd_size", 14), ACCENT, bold=True, font=CODE_FONT)
+        else:
+            color = CODEINK
+            if "PASS" in text:
+                color = GREEN
+            elif "FAIL" in text:
+                color = RED
+            _set(p.add_run(), text, spec.get("out_size", 12.5), color, font=CODE_FONT)
+    if spec.get("caption"):
+        _, tf2 = _box(s, Inches(0.7), Inches(6.72), Inches(12), Inches(0.55))
+        _set(tf2.paragraphs[0].add_run(), spec["caption"], 14, MUTED)
+    _notes(s, spec.get("notes"))
+
+
+RENDER = {"title": title_slide, "section": section_slide, "bullets": bullets_slide,
+          "code": code_slide, "demo": demo_slide}
+
+# ============================================================================ CONTENT
+SLIDES = [
+ {"type": "title", "title": "Pavilion",
+  "subtitle": "A YAML-driven test framework for HPC systems",
+  "links": [("github.com/hpc/pavilion2", "https://github.com/hpc/pavilion2"),
+            ("pavilion2.readthedocs.io", "https://pavilion2.readthedocs.io")],
+  "footer": "Workshop · live demos on the PBS cluster",
+  "notes": "Set expectations: ~60 min, concept + lots of live demos. We'll go from a "
+           "one-line 'hello' test all the way to custom plugins shipping results to OpenSearch."},
+
+ {"type": "section", "title": "Why Pavilion?", "kicker": "The problem"},
+ {"type": "bullets", "title": "What Pavilion is", "kicker": "Overview",
+  "bullets": [
+    "An open-source (LANL) framework for testing HPC systems.",
+    "Mature & battle-tested — years of development at LANL, hardened on production supercomputers.",
+    "Tests are YAML configs that wrap your test codes — not scripts you maintain by hand.",
+    "Runs the same tests across systems and schedulers (raw, Slurm, Flux, PBS).",
+    "Plugin-driven: schedulers, result parsers, result loggers, commands, system variables.",
+  ],
+  "notes": "The pitch for a mixed audience: stop hand-writing brittle test scripts. Describe "
+           "a test once in YAML; Pavilion handles building, scheduling, running, parsing, and "
+           "recording results — consistently, everywhere."},
+
+ {"type": "bullets", "title": "Built for", "kicker": "Where it fits",
+  "bullets": [
+    "Acceptance testing — does a new or returned system meet spec before users get it?",
+    "System validation — confirm the whole stack still behaves after maintenance.",
+    "Baseline testing — capture known-good numbers to measure future runs against.",
+    "Regression testing — catch when a change quietly breaks or slows something.",
+    "Reproducibility — the same test, run the same way, by anyone, every time.",
+  ],
+  "notes": "The 'why should I care' slide. Baseline testing pairs with regression: you can't "
+           "spot a regression without a known-good baseline to compare to."},
+
+ {"type": "bullets", "title": "The problem it solves", "kicker": "Why it matters",
+  "bullets": [
+    "A new cluster, a maintenance window, or a hardware repair — does everything still work and perform?",
+    "Hand-rolled scripts drift, differ per person, and don't record results.",
+    "Pavilion records every run — a searchable history you filter by result, name, or date.",
+    "Pavilion gives one declarative definition + a full run/results pipeline.",
+    "Results are captured, parsed, and shippable to dashboards (OpenSearch → Grafana).",
+  ]},
+
+ {"type": "section", "title": "Core concepts", "kicker": "How it fits together"},
+ {"type": "bullets", "title": "The building blocks", "kicker": "Concepts",
+  "bullets": [
+    "Test — one thing to run, defined in YAML (build + run + result parsing).",
+    "Suite — a YAML file holding related tests (e.g. demo_echo.yaml).",
+    "Config layering — host → mode → test: defaults get overridden in that order.",
+    "Variables & permutations — one definition expands into many test instances.",
+    "config_dirs — where Pavilion looks for suites, modes, series, and plugins.",
+  ],
+  "notes": "Name each concept plainly. 'suite.test' is how you address a test, e.g. "
+           "demo_echo.demo_pass_raw."},
+
+ {"type": "bullets", "title": "The test lifecycle", "kicker": "Under the hood",
+  "bullets": [
+    "1. Resolve — read configs, apply host/mode overrides, expand permutations.",
+    "2. Build — set up the test's source/build once (reused across runs).",
+    "3. Kickoff — hand the test to the scheduler (raw / PBS / Slurm / Flux).",
+    "4. Run — execute run.cmds on the target node(s).",
+    "5. Results — parse output → results.json, then hand off to result loggers.",
+  ],
+  "notes": "This is the mental model for the demos: run -> build (reused) -> kickoff -> run -> "
+           "parse -> log."},
+
+ {"type": "bullets", "title": "The build phase", "kicker": "Under the hood",
+  "bullets": [
+    "Before a test runs, Pavilion builds it — once — then reuses that build across runs.",
+    "Compile from source — hand it a source archive/URL + build commands; it builds for you.",
+    "Build from a source directory — point at a local dir and run your build steps there.",
+    "Or just stage binaries — copy in a directory of pre-built binaries, no compile at all.",
+    "Builds are cached & shared — reruns skip rebuilding (the 'BUILD_REUSED' you'll see live).",
+  ],
+  "notes": "The build step is distinct from the run. Three flavors: compile from source, build "
+           "from a source directory, or copy pre-built binaries. Built once (on the login node — "
+           "compute nodes often have no internet) and reused, which is why demos show BUILD_REUSED."},
+
+ {"type": "code", "title": "Anatomy of a test (YAML)", "kicker": "Concepts",
+  "intro": "A trivial test: a name, a scheduler, and the commands to run.",
+  "code":
+    "demo_pass_raw:\n"
+    "  summary: 'Trivial PASS via raw scheduler'\n"
+    "  scheduler: raw            # run locally, no batch system\n"
+    "  run:\n"
+    "    cmds:\n"
+    "      - 'echo \"hello from $(hostname)\" > demo.txt'\n"
+    "      - 'cat demo.txt'\n"
+    "\n"
+    "# PASS/FAIL comes from the exit code of the last command.\n"
+    "# Address it as:  suite.test   ->   demo_echo.demo_pass_raw",
+  "notes": "Emphasize: the exit code decides PASS/FAIL."},
+
+ {"type": "bullets", "title": "The CLI you'll use", "kicker": "Concepts",
+  "bullets": [
+    "pav run <suite.test>   — build + run a test (or a whole suite).",
+    "pav status <sid>       — where are my tests / did they pass?",
+    "pav results <sid>      — the results table; --full for the full JSON.",
+    "pav wait <sid>         — block until tests finish.",
+    "pav show tests|sched|modes|series   — what's available.",
+    ("pav log, pav cat, pav ls, pav series … — inspect a run in detail.", 1),
+  ],
+  "notes": "Tip: 'pav --quiet' silences a harmless config-label warning for clean output."},
+
+ {"type": "demo", "title": "Your whole run history — searchable", "level": "RECORDS",
+  "run": "11-history.sh",
+  "steps": [
+    {"cmd": "pav status all -F failed              # every failed run, all the way back",
+     "out": "s49.1   FAIL   demo_echo.demo_fail_raw       14:57\n"
+            "s44.2   FAIL   opensearch_verify.os_fail     13:57\n"
+            "s33.2   FAIL   demo_echo.demo_fail_raw       Apr 26"},
+    {"cmd": "pav status all -F 'name=demo_echo.demo_metrics'    # one test, every run",
+     "out": "s52.1   PASS   demo_echo.demo_metrics    15:00\n"
+            "s47.1   PASS   demo_echo.demo_metrics    14:56"},
+    {"cmd": "pav status all -F 'name=demo_echo.demo_fail_raw and failed'   # combine filters",
+     "out": "s49.1   FAIL   demo_echo.demo_fail_raw    14:57"},
+  ],
+  "caption": "Every run is kept. 'all' searches the full history; -F filters — and combines — by result, name, date…",
+  "notes": "Pavilion records every test run persistently. 'pav status all' searches the whole history "
+           "(not just the last day); -F takes keywords (PASSED/FAILED) or field filters (name=…), joined "
+           "with 'and'/'or'. Note the Apr-26 failure — the record goes back as far as your runs do."},
+
+ {"type": "demo", "title": "Basics: PASS and FAIL", "level": "L1", "run": "01-basic.sh",
+  "steps": [
+    {"cmd": "pav run demo_echo.demo_pass_raw demo_echo.demo_fail_raw",
+     "out": "created 2 tests, 0 errors.  Kicked off series s36."},
+    {"cmd": "pav status s36",
+     "out": "s36.1  COMPLETE  PASS  demo_echo.demo_pass_raw\n"
+            "s36.2  COMPLETE  FAIL  demo_echo.demo_fail_raw"},
+    {"cmd": "pav results s36",
+     "out": "Test Results: s36\n"
+            " s36.1 | demo_echo.demo_pass_raw | PASS\n"
+            " s36.2 | demo_echo.demo_fail_raw | FAIL   (exit 7, on purpose)"},
+  ],
+  "caption": "Run a suite, check status, read results. FAIL is intentional (exit 7).",
+  "notes": "Two tests from one 'pav run'; PASS vs FAIL is purely the exit code."},
+
+ {"type": "section", "title": "Getting data out", "kicker": "Result parsing"},
+ {"type": "code", "title": "Result parsing", "kicker": "Results",
+  "intro": "Regex parsers pull values out of the test's output into structured results.",
+  "code":
+    "demo_metrics:\n"
+    "  scheduler: raw\n"
+    "  run:\n"
+    "    cmds:\n"
+    "      - 'echo \"throughput 123.45\"'\n"
+    "      - 'echo \"latency 5.6\"'\n"
+    "  result_parse:\n"
+    "    regex:\n"
+    "      throughput_mbs: { regex: 'throughput (\\S+)', action: store }\n"
+    "      latency_ms:     { regex: 'latency (\\S+)',    action: store }",
+  "notes": "Many parsers exist (regex, constant, table, split…) plus result_evaluate for computed "
+           "pass/fail. Raw stdout becomes queryable numbers."},
+
+ {"type": "demo", "title": "Parsed metrics in results", "level": "L2", "run": "02-metrics.sh",
+  "steps": [
+    {"cmd": "pav run demo_echo.demo_metrics",
+     "out": "Kicked off series s37."},
+    {"cmd": "pav status s37",
+     "out": "s37.1  COMPLETE  PASS  demo_echo.demo_metrics"},
+    {"cmd": "pav results --full s37",
+     "out": "  'throughput_mbs': 123.45,\n"
+            "  'latency_ms': 5.6,\n"
+            "  'errors': 0,"},
+  ],
+  "caption": "Those numbers are now in results.json — ready for logging and dashboards.",
+  "notes": "These parsed fields are exactly what ships to OpenSearch later."},
+
+ {"type": "section", "title": "One config → many tests", "kicker": "Permutations"},
+ {"type": "code", "title": "Permutations", "kicker": "The big one",
+  "intro": "permute_on + variable lists generate one test instance per combination.",
+  "code":
+    "matrix:\n"
+    "  scheduler: raw\n"
+    "  permute_on: [size, mode]\n"
+    "  variables:\n"
+    "    size: ['small', 'medium', 'large']\n"
+    "    mode: ['read', 'write']\n"
+    "  subtitle: '{{size}}-{{mode}}'\n"
+    "  run:\n"
+    "    cmds:\n"
+    "      - 'echo \"size={{size}} mode={{mode}}\"'\n"
+    "\n"
+    "# 3 sizes x 2 modes  =>  6 test instances, one config.",
+  "notes": "The feature people remember. One definition, six tests, each with its own subtitle."},
+
+ {"type": "demo", "title": "Permutations expand", "level": "L3", "run": "03-permutations.sh",
+  "steps": [
+    {"cmd": "pav run demo_perms.matrix",
+     "out": "Test set 'demo_perms.matrix' created 6 tests, 0 errors."},
+    {"cmd": "pav status s46",
+     "out": "s46.1  PASS  demo_perms.matrix.small-read\n"
+            "s46.2  PASS  demo_perms.matrix.medium-read\n"
+            "s46.3  PASS  demo_perms.matrix.large-read\n"
+            "s46.4  PASS  demo_perms.matrix.small-write\n"
+            "s46.5  PASS  demo_perms.matrix.medium-write\n"
+            "s46.6  PASS  demo_perms.matrix.large-write"},
+  ],
+  "caption": "One YAML block → six named test instances, all PASS.",
+  "notes": "Point out the auto-generated subtitles (size-mode)."},
+
+ {"type": "section", "title": "Schedulers", "kicker": "Running at scale"},
+ {"type": "bullets", "title": "Schedulers & the PBS plugin", "kicker": "Schedulers",
+  "bullets": [
+    "Built-in scheduler plugins: raw (local), slurm, flux, pbs.",
+    "Switch by setting `scheduler:` — the test body doesn't change.",
+    "The PBS plugin (ours) submits real qsub jobs and maps nodes/tasks/walltime/queue.",
+    "Scheduler variables (sched.*) expose node lists, chunks, task counts to the test.",
+  ],
+  "notes": "Same test, different scheduler = portability. Our PBS plugin is the custom bit."},
+
+ {"type": "code", "title": "A PBS test", "kicker": "Schedulers",
+  "code":
+    "demo_pass_pbs:\n"
+    "  scheduler: pbs\n"
+    "  schedule:\n"
+    "    pbs:\n"
+    "      nodes: 1\n"
+    "      tasks: 1\n"
+    "      walltime: '00:00:30'\n"
+    "      queue: workq\n"
+    "  run:\n"
+    "    cmds:\n"
+    "      - 'echo \"pbs job on $(hostname)\"'",
+  "notes": "schedule.pbs maps to #PBS resource requests via our plugin."},
+
+ {"type": "demo", "title": "Submit to PBS", "level": "L4", "run": "04-pbs.sh",
+  "steps": [
+    {"cmd": "pav run demo_echo.demo_pass_pbs",
+     "out": "Kicked off series s39."},
+    {"cmd": "pav status s39           # Pavilion: it's running",
+     "out": "s39.1 | 8372_pbs-server | demo_echo.demo_pass_pbs | RUNNING"},
+    {"cmd": "qstat -a                 # PBS: the same job, state R",
+     "out": "8372.pbs-server  pavilion  workq  pav_demo_*  1  1  R  00:00"},
+    {"cmd": "pav results s39          # once it finishes",
+     "out": "s39.1 | demo_echo.demo_pass_pbs | COMPLETE | PASS"},
+  ],
+  "caption": "Submitted → running (seen in Pavilion AND PBS) → PASS on a compute node.",
+  "notes": "The running step shows the same job in both Pavilion (RUNNING) and PBS (state R). "
+           "Live tip: 'pav run' then immediately 'pav status' / 'qstat -a' to catch it."},
+
+ {"type": "section", "title": "Modes", "kicker": "Reusable overlays"},
+ {"type": "bullets", "title": "What a mode is", "kicker": "Modes",
+  "bullets": [
+    "A mode is a small YAML overlay merged on top of a fully-resolved test.",
+    "Apply at run time with -m: `pav run -m prod <test>`.",
+    "Great for: swapping queues, tuning resources, toggling variables — without editing tests.",
+    "Our demo: a `prod` mode overrides a variable (env_label: default → production).",
+  ],
+  "notes": "Modes = reuse. One test, many contexts."},
+
+ {"type": "demo", "title": "A mode overrides config", "level": "L5", "run": "05-modes.sh",
+  "steps": [
+    {"cmd": "pav show modes",
+     "out": "prod"},
+    {"cmd": "pav run demo_modes.mode_demo        # plain",
+     "out": "'label': 'default'"},
+    {"cmd": "pav run -m prod demo_modes.mode_demo # with mode",
+     "out": "'label': 'production'"},
+  ],
+  "caption": "Same test — the `prod` mode overlay changed the parsed result.",
+  "notes": "The label result is the proof. Modes merge on top of the resolved test."},
+
+ {"type": "section", "title": "Series", "kicker": "Grouping runs"},
+ {"type": "demo", "title": "Run a whole group", "level": "L6", "run": "06-series.sh",
+  "steps": [
+    {"cmd": "pav series run demo_series",
+     "out": "Started series s43   (sets: smoke + metrics + matrix)"},
+    {"cmd": "pav series list",
+     "out": "Sid | Name        | State    | Tests | Pass | Fail\n"
+            "s43 | demo_series | COMPLETE |   8   |   8  |   0"},
+  ],
+  "caption": "One command runs several test sets as a named series — 8 tests, all PASS.",
+  "notes": "Series group test sets. (I use unordered for a robust live run.)"},
+
+ {"type": "section", "title": "Plugins", "kicker": "Extending Pavilion"},
+ {"type": "bullets", "title": "Pavilion is plugins all the way down", "kicker": "Plugins",
+  "bullets": [
+    "Scheduler plugins — raw, slurm, flux, pbs (PBS is ours).",
+    "Result parsers — regex, constant, table, …",
+    "System variables — expose machine facts to tests (e.g. sys_name).",
+    "Command plugins — add whole new `pav <command>` subcommands.",
+    "Result loggers — ship results anywhere (CSV, OpenSearch, custom).",
+    ("Drop a .py + a .yapsy-plugin into config/plugins/ — Pavilion discovers it.", 1),
+  ],
+  "notes": "Two kinds of custom plugins next: command plugins and result loggers."},
+
+ {"type": "bullets", "title": "Command plugins (ours)", "kicker": "Custom commands",
+  "bullets": [
+    "hello — a friendly sanity check + Pavilion info.",
+    "recent — the most recent test runs, colored by result.",
+    "test-summary — a PASS/FAIL tally across recent runs.",
+    "disk-usage — how much space test runs / builds / series consume.",
+  ],
+  "notes": "These add new verbs to pav itself — just Python classes Pavilion auto-discovers."},
+
+ {"type": "demo", "title": "Custom commands in action", "level": "L7", "run": "07-command-plugins.sh",
+  "steps": [
+    {"cmd": "pav hello --name Team",
+     "out": "Hello, Team!  Welcome to Pavilion 2!"},
+    {"cmd": "pav recent -n 3",
+     "out": "[s46.6] demo_perms.matrix.large-write   PASS\n"
+            "[s46.4] demo_perms.matrix.small-write   PASS\n"
+            "[s46.1] demo_perms.matrix.small-read    PASS"},
+    {"cmd": "pav test-summary",
+     "out": "PASS: 30    FAIL: 3    TOTAL: 33"},
+  ],
+  "caption": "New pav subcommands — our own tooling built on Pavilion's plugin API.",
+  "notes": "recent/test-summary read Pavilion's own run database via cmd_utils."},
+
+ {"type": "bullets", "title": "Result loggers (ours)", "kicker": "Custom output",
+  "bullets": [
+    "csv_file — appends one CSV row per test (result, duration, metrics, permute vars).",
+    "saLog — a custom NASA/NOAA logger; writes a CSV row on result 'released'.",
+    "opensearch — ships each result document into the `pavilion-results` index.",
+    "Configured once in pavilion.yaml → every test result flows through them.",
+  ],
+  "notes": "Result loggers run at the end of the results stage. One config, applies to all runs. "
+           "(Redact the OpenSearch password if you ever show pavilion.yaml.)"},
+
+ {"type": "demo", "title": "Output plugin: CSV", "level": "L8", "run": "08-output-csv.sh",
+  "out_size": 11.5,
+  "steps": [
+    {"cmd": "pav run demo_echo.demo_pass_pbs      # a real PBS job",
+     "out": "Kicked off series s55."},
+    {"cmd": "qstat -a                             # yes — it went through the scheduler",
+     "out": "8373.pbs-server  pavilion  workq  pav_demo_*  1  1  R  00:00"},
+    {"cmd": "tail /home/pavilion/pav_logs/results.csv   # csv_file logger: one row per test",
+     "out": "name,id,result,duration, ... ,permute_on,extra\n"
+            "demo_echo.demo_pass_pbs,s55.1,PASS,1.4, ... ,{},{}\n"
+            "demo_metrics,s43.2,PASS,0.138, ... ,{},{\"throughput_mbs\":123.45}"},
+  ],
+  "caption": "A real PBS job (qstat proves dispatch), then the csv_file logger writes one row per test.",
+  "notes": "The CSV page also shows scheduler dispatch — demo_pass_pbs is a real PBS job (qstat) — then the "
+           "csv_file logger records it. Parsed metrics land in 'extra', permute vars in 'permute_on'."},
+
+ {"type": "demo", "title": "Output plugin: saLog", "level": "saLog", "run": "12-salog.sh",
+  "steps": [
+    {"cmd": "cat saLog        # our emulator — flags:  -n node  -c content  -u user  -a action",
+     "out": "while getopts \"n:c:u:a:\" opt; do\n"
+            "  case $opt in n) n=$OPTARG;; c) c=$OPTARG;; u) u=$OPTARG;; a) a=$OPTARG;; esac\n"
+            "done\n"
+            "echo \"$n,\\\"$c\\\",$u,$a\" >> salog_output.txt"},
+    {"cmd": "tail salog_output.txt        # writes CSV, just like the csv_file logger",
+     "out": "x1003c7s7b0n3,\"pav_test result=PASS\",pavilion,released\n"
+            "x1003c7s7b0n1,...,x1003c7s7b0n3,\"pav_test result=FAIL\",pavilion,released"},
+  ],
+  "caption": "saLog — a NASA/NOAA-internal logger. Pavilion's plugin calls it on 'released'; it appends CSV.",
+  "notes": "saLog is a logger specific to us (NASA/NOAA); it just writes CSV, so its output looks like the "
+           "csv_file logger's. This is our emulation script on pbs-server — flags -n/-c/-u/-a. Pavilion's "
+           "sa_log result plugin invokes it with action='released'."},
+
+ {"type": "demo", "title": "Output plugin: OpenSearch → Grafana", "level": "L9", "run": "09-opensearch.sh",
+  "steps": [
+    {"cmd": "pav run opensearch_verify",
+     "out": "Kicked off series s44   (ships each result to OpenSearch)"},
+    {"cmd": "python3 ~/opensearch_results.py --name opensearch_verify",
+     "out": "pav_id   name                                          result\n"
+            "s44.1    opensearch_verify.os_pass                     PASS\n"
+            "s44.2    opensearch_verify.os_fail                     FAIL\n"
+            "s44.3    opensearch_verify.os_with_metrics             PASS\n"
+            "s44.4    opensearch_verify.os_version_tag.v1.0-verify  PASS"},
+  ],
+  "caption": "Shipped to OpenSearch, read back from the index — then on to Grafana dashboards.",
+  "notes": "Run the suite, query the index to prove indexing, then open Grafana "
+           "(http://<your-grafana-host>:3000). Export OS_PASS before the demo."},
+
+ {"type": "demo", "title": "Output plugin: MySQL", "level": "L10", "run": "10-mysql.sh",
+  "steps": [
+    {"cmd": "pav run demo_echo.demo_metrics     # every logger fires, incl. mysql",
+     "out": "Kicked off series s47."},
+    {"cmd": "mysql pavilion -e 'SELECT pav_id,name,result,dur FROM results ...'",
+     "out": "pav_id   name                      result   dur\n"
+            "s48.1    demo_echo.demo_pass_raw    PASS     0.076\n"
+            "s49.1    demo_echo.demo_fail_raw    FAIL     0.045\n"
+            "s47.1    demo_echo.demo_metrics     PASS     0.077"},
+  ],
+  "caption": "A result logger we wrote — every result lands in a MySQL table (passwordless local auth).",
+  "notes": "Built with pymysql; connects via unix_socket so there's NO password in pavilion.yaml. "
+           "The row-per-test appears the moment the run finishes."},
+
+ {"type": "bullets", "title": "Export results anywhere", "kicker": "Result loggers",
+  "bullets": [
+    "Grafana — live dashboards & trends  (shown today).",
+    "OpenSearch — index every result document  (shown today).",
+    "MySQL — a row per result in a relational table  (shown today).",
+    "PostgreSQL — same idea, for a Postgres shop.",
+    "[add your own] — a result logger is just a plugin: target any destination.",
+  ],
+  "notes": "The point: loggers are plugins, so results can go wherever you need. csv_file / "
+           "saLog / opensearch / mysql all exist and are shown today; PostgreSQL is an example "
+           "you'd write a logger for — '[add your own]' says exactly that."},
+
+ {"type": "section", "title": "Putting it together", "kicker": "Real-world"},
+ {"type": "bullets", "title": "How we use it here", "kicker": "In practice",
+  "bullets": [
+    "Define acceptance/regression tests once (incl. real benchmarks: HPL, HPCG).",
+    "Run through PBS across the cluster; permute across configurations.",
+    "Parse metrics; every result flows to CSV + OpenSearch automatically.",
+    "Grafana dashboards make trends and regressions visible over time.",
+  ],
+  "notes": "Pavilion isn't just running tests — it's a data pipeline from 'did it pass' to "
+           "'how is the system trending'."},
+
+ {"type": "bullets", "title": "Recap", "kicker": "Wrap-up",
+  "bullets": [
+    "YAML tests → build → run → parse → log. One model, everywhere.",
+    "Permutations turn one config into a whole test matrix.",
+    "Schedulers (incl. our PBS plugin) run it at cluster scale.",
+    "Plugins extend everything — our commands and result loggers included.",
+    "Results become dashboards. Questions?",
+    "Learn more →  github.com/hpc/pavilion2   ·   pavilion2.readthedocs.io",
+  ],
+  "notes": "Leave up for Q&A. Offer to walk through any demo again live."},
+]
+
+for spec in SLIDES:
+    RENDER[spec["type"]](spec)
+
+OUT = "pavilion-workshop.pptx"
+prs.save(OUT)
+print(f"Wrote {OUT} with {len(SLIDES)} slides.")

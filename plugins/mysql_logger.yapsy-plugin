@@ -1,0 +1,3 @@
+[Core]
+Name = MySQL Result Logger
+Module = mysql_logger

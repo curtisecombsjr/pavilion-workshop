@@ -1,0 +1,18 @@
+# demo_modes: shows how a MODE overrides a test's config at run time.
+# Run plain:            pav run demo_modes.mode_demo       -> label=default
+# Run with the mode:    pav run -m prod demo_modes.mode_demo -> label=production
+# The parsed 'label' result proves the mode took effect.
+
+mode_demo:
+  summary: 'A mode overrides config at run time'
+  scheduler: raw
+  variables:
+    env_label: 'default'
+  run:
+    cmds:
+      - 'echo "running with label={{env_label}}"'
+  result_parse:
+    regex:
+      label:
+        regex: 'label=(\S+)'
+        action: store
