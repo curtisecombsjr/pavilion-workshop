@@ -8,8 +8,8 @@ sid=$(echo "$out" | grep -oE 's[0-9]+' | head -1)
 qstat_show   # through the scheduler
 pav wait "$sid" >/dev/null 2>&1
 pause
-# Export OS_PASS in your shell before the demo (never hard-code a password).
-: "${OS_PASS:?Set OS_PASS in your environment first}"
+# No OS_PASS needed: opensearch_results.py auto-loads the password from pavilion.yaml
+# (env OS_PASS still overrides if you want). Nothing is hard-coded or displayed.
 say "python3 ~/opensearch_results.py --name opensearch_verify --limit 6   # read them back from the index"
 python3 /home/pavilion/opensearch_results.py --name opensearch_verify --limit 6
 echo; echo "Then open your Grafana dashboards."

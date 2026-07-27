@@ -726,7 +726,8 @@ SLIDES = [
   ],
   "caption": "Shipped to OpenSearch, read back from the index — then on to Grafana dashboards.",
   "notes": "Run the suite, query the index to prove indexing, then open Grafana "
-           "(http://<your-grafana-host>:3000). Export OS_PASS before the demo."},
+           "(http://<your-grafana-host>:3000). The read-back auto-loads the password from "
+           "pavilion.yaml — no OS_PASS export needed."},
 
  {"type": "demo", "title": "Output plugin: MySQL", "level": "L10", "run": "10-mysql.sh",
   "steps": [

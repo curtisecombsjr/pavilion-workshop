@@ -10,10 +10,11 @@ The deck (`../deck/pavilion-workshop.pptx`) has a slide + speaker notes per demo
 ssh root@pbs-server           # keyed, no password
 sudo -iu pavilion             # pav config lives in pavilion's home — the -i matters
 cd ~/pav_demo                 # the demo scripts are deployed here
-
-# For L9 only — export the OpenSearch password into your shell (never hard-code it):
-export OS_PASS='<your OpenSearch password>'
 ```
+
+No credentials to set up: L9's read-back (`opensearch_results.py`) auto-loads the OpenSearch
+password from `pavilion.yaml` (the same place the logger reads it). Set `OS_PASS` only if you
+want to override it.
 
 Tips:
 - Every script prints the command in cyan, then the real `pav` output.
@@ -45,7 +46,7 @@ Then open **Grafana**: `http://<your-grafana-host>:3000`.
 
 - **L4 (PBS) timing:** run `pav run …` then *immediately* `qstat -a` to catch the job before it finishes.
 - **L6 (series):** two sets (`smoke` + `perf`), `ordered: False` on purpose — ordered series need a background manager and can stall. Run it **on its own**, not immediately after another heavy run, and give it ~30s to reach COMPLETE.
-- **L9:** if `OS_PASS` isn't set, the query errors. The 08-output-csv demo is a safe fallback if OpenSearch is unhappy.
+- **L9:** the read-back auto-loads the password from `pavilion.yaml`, so no `OS_PASS` needed. The 08-output-csv demo is a safe fallback if OpenSearch is unhappy.
 - **L10 (MySQL):** MariaDB must be running on pbs-server (`systemctl status mariadb`). The `mysql` CLI as the `pavilion` user auths via unix_socket (no password). The logger is **non-fatal** — if MySQL is down, other demos still pass (results just skip the MySQL row).
 - **⚠️ Do NOT display `pavilion.yaml` on screen** — it contains a plaintext OpenSearch password. Use the deck's redacted version.
 - Nothing is destructive; re-running demos just adds more runs (which makes `recent`/`test-summary` richer).
