@@ -31,6 +31,7 @@ scheduler dispatched it. (Running a PBS test also proves PBS itself works.)
 | Inherit | `./00-inheritance.sh` | inherits_from: child inherits base, overrides its delta | `pav run demo_inherit.small demo_inherit.large demo_inherit.debug` → `qstat -a` → `pav results --full <sid>` |
 | L1 | `./01-basic.sh` | PASS + intentional FAIL (PBS) | `pav run demo_pbs.pass demo_pbs.fail` → `qstat -a` |
 | L2 | `./02-metrics.sh` | result parsing → numbers | `pav run demo_pbs.metrics` → `qstat -a` → `pav results --full <sid>` |
+| Eval | `./02b-evaluate.sh` | result_evaluate → PASS/FAIL (score > 100) | `pav run demo_eval.high demo_eval.low` → `qstat -a` → `pav results --full <sid>` |
 | L3 | `./03-permutations.sh` | 1 config → 6 PBS tests | `pav run demo_perms.matrix` → `qstat -a` |
 | L4 | `./04-pbs.sh` | PBS submit; **running** in pav + PBS; result | `pav run demo_pbs.pass` → `pav status <sid>` + `qstat -a` → `pav results <sid>` |
 | L5 | `./05-modes.sh` | mode flips FAIL→PASS (throughput 1200→1400 vs a >1300 check) | `pav run demo_modes.mode_demo` (FAIL) → `pav run -m prod demo_modes.mode_demo` (PASS) → `qstat -a` |

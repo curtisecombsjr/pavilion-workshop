@@ -453,6 +453,39 @@ SLIDES = [
   "caption": "Those numbers are now in results.json — ready for logging and dashboards.",
   "notes": "These parsed fields are exactly what ships to OpenSearch later."},
 
+ {"type": "section", "title": "Turning numbers into pass/fail", "kicker": "Result evaluation"},
+ {"type": "code", "title": "Result evaluation", "kicker": "Evaluate",
+  "intro": "Parsing pulls values out; result_evaluate judges them. The 'result' key sets PASS/FAIL.",
+  "code":
+    "high:\n"
+    "  run:\n"
+    "    cmds:\n"
+    "      - 'echo \"score 150\"'\n"
+    "  result_parse:\n"
+    "    regex:\n"
+    "      score:\n"
+    "        regex: 'score (\\S+)'      # parse: pull the number out\n"
+    "  result_evaluate:\n"
+    "    result: 'score > 100'          # evaluate: turn it into PASS/FAIL",
+  "notes": "result_evaluate runs expressions over the parsed results. Assigning the special 'result' "
+           "key overrides the default exit-code result — so a test that exits 0 still FAILs if the "
+           "number doesn't clear the bar. Expressions can do math, comparisons, all(), any(), etc."},
+
+ {"type": "demo", "title": "Evaluate decides pass or fail", "level": "EVAL", "run": "02b-evaluate.sh",
+  "steps": [
+    {"cmd": "pav run demo_eval.high demo_eval.low     # both exit 0",
+     "out": "created 2 tests, 0 errors.\nsid: s155"},
+    {"cmd": "qstat -a                                 # two PBS jobs",
+     "out": "9086.pbs-server pavilion workq pav_demo_*  1  1  R\n"
+            "9087.pbs-server pavilion workq pav_demo_*  1  1  R"},
+    {"cmd": "pav results --full s155                  # result = score > 100, NOT the exit code",
+     "out": "high  -> score=150   result=PASS     # 150 > 100\n"
+            "low   -> score=80    result=FAIL     # 80 > 100 is false"},
+  ],
+  "caption": "Same rule (score > 100), different data → different verdict. Evaluation, not the exit code, sets PASS/FAIL.",
+  "notes": "Both tests exit 0, so by exit code both would PASS. The evaluation flips 'low' to FAIL because "
+           "80 isn't > 100. This is how you turn a measured number into an acceptance criterion."},
+
  {"type": "section", "title": "One config → many tests", "kicker": "Permutations"},
  {"type": "code", "title": "Permutations", "kicker": "The big one",
   "intro": "permute_on + variable lists generate one test instance per combination.",

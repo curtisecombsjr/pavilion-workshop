@@ -1,0 +1,36 @@
+# demo_eval: result_evaluate turns a parsed number into PASS/FAIL.
+# Rule: score > 100. Both tests exit 0 — the *evaluation* decides pass/fail.
+high:
+  summary: 'Score above the threshold -> PASS'
+  scheduler: pbs
+  schedule:
+    pbs:
+      queue: workq
+      nodes: 1
+      walltime: '00:02:00'
+  run:
+    cmds:
+      - 'echo "score 150"'
+  result_parse:
+    regex:
+      score:
+        regex: 'score (\S+)'
+  result_evaluate:
+    result: 'score > 100'
+low:
+  summary: 'Score below the threshold -> FAIL'
+  scheduler: pbs
+  schedule:
+    pbs:
+      queue: workq
+      nodes: 1
+      walltime: '00:02:00'
+  run:
+    cmds:
+      - 'echo "score 80"'
+  result_parse:
+    regex:
+      score:
+        regex: 'score (\S+)'
+  result_evaluate:
+    result: 'score > 100'
