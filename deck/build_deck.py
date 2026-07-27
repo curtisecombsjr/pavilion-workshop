@@ -354,6 +354,24 @@ SLIDES = [
            "(threads: 5). 'debug' inherits and overrides only the build, adding -fsanitize=address. "
            "Each child writes just its delta — that's the DRY win."},
 
+ {"type": "demo", "title": "Inheritance: inherited vs overridden", "level": "Inheritance", "run": "00-inheritance.sh",
+  "steps": [
+    {"cmd": "pav run demo_inherit.small demo_inherit.large demo_inherit.debug",
+     "out": "created 3 tests, 0 errors.   BUILD_REUSED: 2   # small & large reuse base's build\nsid: s148"},
+    {"cmd": "qstat -a                                              # each child = its own PBS job",
+     "out": "9068.pbs-server pavilion workq pav_demo_*  1  1  R\n"
+            "9069.pbs-server pavilion workq pav_demo_*  1  1  R"},
+    {"cmd": "pav results --full s148                               # inherited vs overridden, per child",
+     "out": "small  -> flags=-O3                    threads=2    # inherits everything\n"
+            "large  -> flags=-O3                    threads=5    # overrode just the variable\n"
+            "debug  -> flags=-O3-fsanitize=address  threads=2    # overrode just the build"},
+  ],
+  "caption": "One base, three children: small inherits all; large changes only the variable; debug changes only the build.",
+  "notes": "The live test echoes the same flags/threads the base sets, so you can watch inheritance resolve "
+           "without compiling STREAM. Proof: small got both inherited values; large kept the inherited build "
+           "(flags=-O3) but overrode threads; debug kept the inherited threads but overrode the build. Note "
+           "BUILD_REUSED — small and large share base's build."},
+
  {"type": "bullets", "title": "The CLI you'll use", "kicker": "Concepts",
   "bullets": [
     "pav run <suite.test>   — build + run a test (or a whole suite).",

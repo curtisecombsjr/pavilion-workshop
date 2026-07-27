@@ -1,0 +1,39 @@
+# demo_inherit: inheritance in action. 'base' holds shared config; the others
+# inherit_from it and override only what differs.
+#   small -> inherits everything unchanged
+#   large -> overrides just the variable (threads)
+#   debug -> overrides just the build (compiler flags)
+base:
+  summary: 'Base test — shared config the others inherit'
+  scheduler: pbs
+  schedule:
+    pbs:
+      queue: workq
+      nodes: 1
+      walltime: '00:02:00'
+  variables:
+    threads: 2
+  build:
+    cmds:
+      - 'echo "flags=-O3" > flags.txt'
+  run:
+    cmds:
+      - 'cat flags.txt'
+      - 'echo "threads={{threads}}"'
+  result_parse:
+    regex:
+      flags:
+        regex: 'flags=(\S+)'
+      threads:
+        regex: 'threads=(\S+)'
+small:
+  inherits_from: base
+large:
+  inherits_from: base
+  variables:
+    threads: 5
+debug:
+  inherits_from: base
+  build:
+    cmds:
+      - 'echo "flags=-O3-fsanitize=address" > flags.txt'

@@ -28,6 +28,7 @@ scheduler dispatched it. (Running a PBS test also proves PBS itself works.)
 
 | # | Script | Shows | One-liner if you'd rather type it |
 |---|--------|-------|-----------------------------------|
+| Inherit | `./00-inheritance.sh` | inherits_from: child inherits base, overrides its delta | `pav run demo_inherit.small demo_inherit.large demo_inherit.debug` → `qstat -a` → `pav results --full <sid>` |
 | L1 | `./01-basic.sh` | PASS + intentional FAIL (PBS) | `pav run demo_pbs.pass demo_pbs.fail` → `qstat -a` |
 | L2 | `./02-metrics.sh` | result parsing → numbers | `pav run demo_pbs.metrics` → `qstat -a` → `pav results --full <sid>` |
 | L3 | `./03-permutations.sh` | 1 config → 6 PBS tests | `pav run demo_perms.matrix` → `qstat -a` |
