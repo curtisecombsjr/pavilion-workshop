@@ -593,7 +593,7 @@ SLIDES = [
 
  {"type": "section", "title": "Series", "kicker": "Grouping runs"},
  {"type": "code", "title": "A series file", "kicker": "Series",
-  "intro": "demo_series.yaml — name a few test sets; each set lists the tests it runs.",
+  "intro": "demo_series.yaml — name a test set, list the tests it runs.",
   "code":
     "# config/series/demo_series.yaml\n"
     "ordered: False\n"
@@ -601,26 +601,26 @@ SLIDES = [
     "  smoke:\n"
     "    tests:\n"
     "      - demo_pbs.pass\n"
-    "  perf:\n"
-    "    tests:\n"
+    "      - demo_pbs.fail\n"
     "      - demo_pbs.metrics",
   "notes": "Sets can be ordered or not; unordered runs them concurrently (robust for a live demo). "
-           "Each set becomes its own PBS job."},
+           "One 'pav series run' launches every test in the set."},
 
  {"type": "demo", "title": "Run a whole group", "level": "L6", "run": "06-series.sh",
   "steps": [
     {"cmd": "pav series run demo_series",
-     "out": "Created Test Series demo_series.\nStarted series s74."},
-    {"cmd": "qstat -a                        # one PBS job per test set",
-     "out": "8387.pbs-server pavilion workq pav_demo_*  1  1  R\n"
-            "8388.pbs-server pavilion workq pav_demo_*  1  1  R"},
-    {"cmd": "pav series status s74",
-     "out": "Id  | Name        | Status   | Tests | Pass | Fail\n"
-            "s74 | demo_series | COMPLETE |   2   |   2  |   0"},
+     "out": "Created Test Series demo_series.\nStarted series s152."},
+    {"cmd": "qstat -a                        # the set's tests dispatched to PBS",
+     "out": "9076.pbs-server pavilion workq pav_demo_*  1  1  R\n"
+            "9077.pbs-server pavilion workq pav_demo_*  1  1  R"},
+    {"cmd": "pav series status s152",
+     "out": "Id   | Name        | Status   | Tests | Pass | Fail\n"
+            "s152 | demo_series | COMPLETE |   3   |   2  |   1"},
   ],
-  "caption": "One command runs both test sets as a named series — two PBS jobs, all PASS.",
-  "notes": "Series group test sets; each set here dispatches its own PBS job (qstat shows two). "
-           "I use unordered for a robust live run."},
+  "caption": "One command runs all three tests in the 'smoke' set — 2 PASS, 1 (intentional) FAIL.",
+  "notes": "Series group tests into sets and run them with one command. The smoke set here holds "
+           "demo_pbs.pass, .fail, and .metrics — 2 pass, 1 intentional fail. I use unordered for a "
+           "robust live run."},
 
  {"type": "section", "title": "Results", "kicker": "Reading & scripting"},
  {"type": "demo", "title": "Results: human and machine", "level": "RESULTS", "run": None,

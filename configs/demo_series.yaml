@@ -1,9 +1,8 @@
-# demo_series: groups PBS test sets; run with `pav series run demo_series`.
+# demo_series: one 'smoke' set running three PBS tests; run with `pav series run demo_series`.
 ordered: False
 test_sets:
   smoke:
     tests:
       - demo_pbs.pass
-  perf:
-    tests:
+      - demo_pbs.fail
       - demo_pbs.metrics
