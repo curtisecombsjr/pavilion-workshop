@@ -31,7 +31,7 @@ scheduler dispatched it. (Running a PBS test also proves PBS itself works.)
 | L2 | `./02-metrics.sh` | result parsing → numbers | `pav run demo_pbs.metrics` → `qstat -a` → `pav results --full <sid>` |
 | L3 | `./03-permutations.sh` | 1 config → 6 PBS tests | `pav run demo_perms.matrix` → `qstat -a` |
 | L4 | `./04-pbs.sh` | PBS submit; **running** in pav + PBS; result | `pav run demo_pbs.pass` → `pav status <sid>` + `qstat -a` → `pav results <sid>` |
-| L5 | `./05-modes.sh` | mode overrides a var | `pav run -m prod demo_modes.mode_demo` → `qstat -a` |
+| L5 | `./05-modes.sh` | mode flips FAIL→PASS (throughput 1200→1400 vs a >1300 check) | `pav run demo_modes.mode_demo` (FAIL) → `pav run -m prod demo_modes.mode_demo` (PASS) → `qstat -a` |
 | L6 | `./06-series.sh` | run a group (one PBS job per set) | `pav series run demo_series` → `qstat -a` |
 | L7 | `./07-command-plugins.sh` | your command plugins | `pav hello` / `pav recent` / `pav test-summary` / `pav disk-usage` |
 | L8 | `./08-output-csv.sh` | csv_file logger | `pav run demo_pbs.pass demo_pbs.metrics` → `qstat -a` → `tail ~/pav_logs/results.csv` |

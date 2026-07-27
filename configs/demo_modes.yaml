@@ -1,6 +1,8 @@
-# demo_modes: a mode overrides a variable at run time; test runs via PBS.
+# demo_modes: the test FAILs on its own; a mode overrides a value to make it PASS.
+# Base throughput is 1200, and the test requires > 1300 -> FAIL.
+# Run with `-m prod` to bump throughput to 1400 -> PASS.
 mode_demo:
-  summary: 'A mode overrides config at run time (PBS)'
+  summary: 'A mode overrides a measured value, flipping the test FAIL -> PASS (PBS)'
   scheduler: pbs
   schedule:
     pbs:
@@ -8,11 +10,13 @@ mode_demo:
       nodes: 1
       walltime: '00:02:00'
   variables:
-    env_label: 'default'
+    throughput: 1200
   run:
     cmds:
-      - 'echo "running with label={{env_label}}"'
+      - 'echo "throughput {{throughput}}"'
   result_parse:
     regex:
-      label:
-        regex: 'label=(\S+)'
+      throughput_mbs:
+        regex: 'throughput (\S+)'
+  result_evaluate:
+    result: 'throughput_mbs > 1300'

@@ -1,5 +1,6 @@
 # Mode file -> deploys to config/modes/prod.yaml
 # A mode is just config keys merged on top of the fully-resolved test.
+# Here it bumps throughput 1200 -> 1400, so the test clears the > 1300 check and PASSES.
 # Apply with:  pav run -m prod <test>
 variables:
-  env_label: 'production'
+  throughput: 1400

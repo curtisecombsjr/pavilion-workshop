@@ -529,34 +529,49 @@ SLIDES = [
     "A mode is a small YAML overlay merged on top of a fully-resolved test.",
     "Apply at run time with -m: `pav run -m prod <test>`.",
     "Great for: swapping queues, tuning resources, toggling variables — without editing tests.",
-    "Our demo: a `prod` mode overrides a variable (env_label: default → production).",
+    "Our demo: the test fails at throughput 1200; a `prod` mode raises it to 1400 → it passes.",
   ],
-  "notes": "Modes = reuse. One test, many contexts."},
+  "notes": "Modes = reuse. One test, many contexts. Here the same test flips FAIL→PASS purely "
+           "because the mode overrode a value — no edit to the test itself."},
 
- {"type": "code", "title": "A mode file", "kicker": "Modes",
-  "intro": "prod.yaml — just the config keys you want merged on top of a resolved test.",
+ {"type": "code", "title": "The test, and a mode that changes its outcome", "kicker": "Modes",
+  "intro": "The test measures throughput and requires > 1300. Base is 1200 (FAIL); the mode raises it.",
   "code":
-    "# config/modes/prod.yaml\n"
-    "# Apply with:  pav run -m prod <test>\n"
+    "# config/suites/demo_modes.yaml   (the test)\n"
+    "mode_demo:\n"
+    "  variables:\n"
+    "    throughput: 1200\n"
+    "  run:\n"
+    "    cmds:\n"
+    "      - 'echo \"throughput {{throughput}}\"'\n"
+    "  result_parse:\n"
+    "    regex:\n"
+    "      throughput_mbs:\n"
+    "        regex: 'throughput (\\S+)'\n"
+    "  result_evaluate:\n"
+    "    result: 'throughput_mbs > 1300'      # PASS only if above 1300\n"
+    "\n"
+    "# config/modes/prod.yaml   (the mode overlay)\n"
     "variables:\n"
-    "  env_label: 'production'",
-  "notes": "A mode is tiny — here it overrides one variable. Modes can also swap queues, "
-           "bump resources, toggle features. No test edits required."},
+    "  throughput: 1400                        # override 1200 -> 1400",
+  "code_size": 13, "code_h": 5.3,
+  "notes": "The test evaluates throughput_mbs > 1300. Base value 1200 fails it. The prod mode "
+           "overrides only that variable to 1400, so the same test now passes — no edit to the test."},
 
- {"type": "demo", "title": "A mode overrides config", "level": "L5", "run": "05-modes.sh",
+ {"type": "demo", "title": "A mode flips FAIL → PASS", "level": "L5", "run": "05-modes.sh",
   "steps": [
-    {"cmd": "pav run -m prod demo_modes.mode_demo    # apply the prod overlay",
-     "out": "sid: s73\ntests: 1"},
-    {"cmd": "qstat -a                                # dispatched to PBS",
-     "out": "8386.pbs-server pavilion workq pav_demo_*  1  1  R"},
-    {"cmd": "pav results --full s73",
-     "out": "  'name': 'demo_modes.mode_demo',\n"
-            "  'label': 'production',\n"
-            "  'var': {'env_label': 'production'}"},
+    {"cmd": "pav run demo_modes.mode_demo           # base: throughput = 1200",
+     "out": "  'throughput_mbs': 1200,\n"
+            "  'result': 'FAIL'          # 1200 > 1300 is false"},
+    {"cmd": "qstat -a                                # a real PBS job",
+     "out": "8407.pbs-server pavilion workq pav_demo_*  1  1  R"},
+    {"cmd": "pav run -m prod demo_modes.mode_demo    # prod overrides -> throughput = 1400",
+     "out": "  'throughput_mbs': 1400,\n"
+            "  'result': 'PASS'          # 1400 > 1300 is true"},
   ],
-  "caption": "Plain, env_label is 'default'; with `-m prod` the overlay flips it to 'production'.",
-  "notes": "The label result is the proof — a plain run parses 'default', the prod mode merges "
-           "env_label: production on top. Modes merge onto the fully-resolved test."},
+  "caption": "Same test, no edits — the prod mode raised throughput past the 1300 threshold, flipping FAIL → PASS.",
+  "notes": "The result is the proof: base throughput 1200 fails the > 1300 check; the prod mode overrides "
+           "the value to 1400 and the identical test now passes. Both ran through PBS (qstat)."},
 
  {"type": "section", "title": "Series", "kicker": "Grouping runs"},
  {"type": "code", "title": "A series file", "kicker": "Series",
