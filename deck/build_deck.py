@@ -354,7 +354,7 @@ SLIDES = [
            "(threads: 5). 'debug' inherits and overrides only the build, adding -fsanitize=address. "
            "Each child writes just its delta — that's the DRY win."},
 
- {"type": "demo", "title": "Inheritance: inherited vs overridden", "level": "Inheritance", "run": "00-inheritance.sh",
+ {"type": "demo", "title": "Inheritance: inherited vs overridden", "level": "Inheritance", "run": "01-inheritance.sh",
   "steps": [
     {"cmd": "pav run demo_inherit.small demo_inherit.large demo_inherit.debug",
      "out": "created 3 tests, 0 errors.   BUILD_REUSED: 2   # small & large reuse base's build\nsid: s148"},
@@ -384,7 +384,7 @@ SLIDES = [
   "notes": "Tip: 'pav --quiet' silences a harmless config-label warning for clean output."},
 
  {"type": "demo", "title": "Your whole run history — searchable", "level": "RECORDS",
-  "run": "11-history.sh",
+  "run": "13-history.sh",
   "steps": [
     {"cmd": "pav status all -F failed                    # every failed run, all the way back",
      "out": "s70.2   FAIL   demo_pbs.fail              16:40\n"
@@ -403,7 +403,7 @@ SLIDES = [
            "(not just the last day); -F takes keywords (PASSED/FAILED) or field filters (name=…), joined "
            "with 'and'/'or'. Note the Apr-26 failure — the record goes back as far as your runs do."},
 
- {"type": "demo", "title": "Basics: PASS and FAIL", "level": "L1", "run": "01-basic.sh",
+ {"type": "demo", "title": "Basics: PASS and FAIL", "level": "L1", "run": "02-basic.sh",
   "steps": [
     {"cmd": "pav run demo_pbs.pass demo_pbs.fail          # two PBS jobs",
      "out": "sid: s70\ntests: 2"},
@@ -437,7 +437,7 @@ SLIDES = [
   "notes": "Many parsers exist (regex, constant, table, split…) plus result_evaluate for computed "
            "pass/fail. Raw stdout becomes queryable numbers."},
 
- {"type": "demo", "title": "Parsed metrics in results", "level": "L2", "run": "02-metrics.sh",
+ {"type": "demo", "title": "Parsed metrics in results", "level": "L2", "run": "03-metrics.sh",
   "steps": [
     {"cmd": "pav run demo_pbs.metrics",
      "out": "sid: s71\ntests: 1"},
@@ -471,7 +471,7 @@ SLIDES = [
            "key overrides the default exit-code result — so a test that exits 0 still FAILs if the "
            "number doesn't clear the bar. Expressions can do math, comparisons, all(), any(), etc."},
 
- {"type": "demo", "title": "Evaluate decides pass or fail", "level": "EVAL", "run": "02b-evaluate.sh",
+ {"type": "demo", "title": "Evaluate decides pass or fail", "level": "EVAL", "run": "04-evaluate.sh",
   "steps": [
     {"cmd": "pav run demo_eval.high demo_eval.low     # both exit 0",
      "out": "created 2 tests, 0 errors.\nsid: s155"},
@@ -509,7 +509,7 @@ SLIDES = [
            "share_allocation: false makes Pavilion submit a separate PBS job per instance (the default "
            "packs them into one shared allocation)."},
 
- {"type": "demo", "title": "Permutations expand", "level": "L3", "run": "03-permutations.sh",
+ {"type": "demo", "title": "Permutations expand", "level": "L3", "run": "05-permutations.sh",
   "steps": [
     {"cmd": "pav run demo_perms.matrix",
      "out": "Test set 'demo_perms.matrix' created 6 tests, skipped 0, 0 errors.\nsid: s93"},
@@ -559,7 +559,7 @@ SLIDES = [
     "      - 'echo \"pbs job on $(hostname)\"'",
   "notes": "schedule.pbs maps to #PBS resource requests via our plugin. Addressed as demo_pbs.pass."},
 
- {"type": "demo", "title": "Submit to PBS", "level": "L4", "run": "04-pbs.sh",
+ {"type": "demo", "title": "Submit to PBS", "level": "L4", "run": "06-pbs.sh",
   "steps": [
     {"cmd": "pav run demo_pbs.pass",
      "out": "sid: s76\ntests: 1"},
@@ -609,7 +609,7 @@ SLIDES = [
   "notes": "The test evaluates throughput_mbs > 1300. Base value 1200 fails it. The prod mode "
            "overrides only that variable to 1400, so the same test now passes — no edit to the test."},
 
- {"type": "demo", "title": "A mode flips FAIL → PASS", "level": "L5", "run": "05-modes.sh",
+ {"type": "demo", "title": "A mode flips FAIL → PASS", "level": "L5", "run": "07-modes.sh",
   "steps": [
     {"cmd": "pav run demo_modes.mode_demo           # base: throughput = 1200",
      "out": "  'throughput_mbs': 1200,\n"
@@ -639,7 +639,7 @@ SLIDES = [
   "notes": "Sets can be ordered or not; unordered runs them concurrently (robust for a live demo). "
            "One 'pav series run' launches every test in the set."},
 
- {"type": "demo", "title": "Run a whole group", "level": "L6", "run": "06-series.sh",
+ {"type": "demo", "title": "Run a whole group", "level": "L6", "run": "08-series.sh",
   "steps": [
     {"cmd": "pav series run demo_series",
      "out": "Created Test Series demo_series.\nStarted series s152."},
@@ -698,7 +698,7 @@ SLIDES = [
   ],
   "notes": "These add new verbs to pav itself — just Python classes Pavilion auto-discovers."},
 
- {"type": "demo", "title": "Custom commands in action", "level": "L7", "run": "07-command-plugins.sh",
+ {"type": "demo", "title": "Custom commands in action", "level": "L7", "run": "09-command-plugins.sh",
   "out_size": 11.5,
   "steps": [
     {"cmd": "pav hello --name Team",
@@ -732,7 +732,7 @@ SLIDES = [
   "notes": "Result loggers run at the end of the results stage. One config, applies to all runs. "
            "(Redact the OpenSearch password if you ever show pavilion.yaml.)"},
 
- {"type": "demo", "title": "Output plugin: CSV", "level": "L8", "run": "08-output-csv.sh",
+ {"type": "demo", "title": "Output plugin: CSV", "level": "L8", "run": "10-output-csv.sh",
   "out_size": 11.5,
   "steps": [
     {"cmd": "pav run demo_pbs.pass demo_pbs.metrics      # real PBS jobs",
@@ -748,7 +748,7 @@ SLIDES = [
   "notes": "The CSV page also shows scheduler dispatch — these are real PBS jobs (qstat) — then the "
            "csv_file logger records one row per test. Parsed metrics land in 'extra', permute vars in 'permute_on'."},
 
- {"type": "demo", "title": "Output plugin: saLog", "level": "saLog", "run": "12-salog.sh",
+ {"type": "demo", "title": "Output plugin: saLog", "level": "saLog", "run": "14-salog.sh",
   "steps": [
     {"cmd": "pav run demo_pbs.salog                 # 1. run in Pavilion (per_file: name)",
      "out": "sid: s141\ntests: 1"},
@@ -762,7 +762,7 @@ SLIDES = [
            "node's result is recorded; Pavilion's sa_log plugin then invokes saLog once per node with the "
            "'released' action, writing node, content (result), user, action to the CSV."},
 
- {"type": "demo", "title": "Output plugin: OpenSearch → Grafana", "level": "L9", "run": "09-opensearch.sh",
+ {"type": "demo", "title": "Output plugin: OpenSearch → Grafana", "level": "L9", "run": "11-opensearch.sh",
   "steps": [
     {"cmd": "pav run -m pbs opensearch_verify        # 4 tests via PBS; each result → OpenSearch",
      "out": "created 4 tests, skipped 0, 0 errors.\nsid: s75"},
@@ -780,7 +780,7 @@ SLIDES = [
            "(http://<your-grafana-host>:3000). The read-back auto-loads the password from "
            "pavilion.yaml — no OS_PASS export needed."},
 
- {"type": "demo", "title": "Output plugin: MySQL", "level": "L10", "run": "10-mysql.sh",
+ {"type": "demo", "title": "Output plugin: MySQL", "level": "L10", "run": "12-mysql.sh",
   "steps": [
     {"cmd": "pav run demo_pbs.metrics          # every logger fires, incl. mysql",
      "out": "sid: s71\ntests: 1"},
