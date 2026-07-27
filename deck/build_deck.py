@@ -12,6 +12,8 @@ Slide helpers: title / section / bullets / code / demo. Demo slides render a
 terminal TRANSCRIPT — each command ($ prompt) followed by its real output —
 from a `steps` list. Every slide can carry speaker notes (the `notes` key).
 """
+import os
+
 from pptx import Presentation
 from pptx.util import Inches, Pt
 from pptx.dml.color import RGBColor
@@ -768,6 +770,7 @@ SLIDES = [
 for spec in SLIDES:
     RENDER[spec["type"]](spec)
 
-OUT = "pavilion-workshop.pptx"
+# Save next to this script, so the build works from any working directory.
+OUT = os.path.join(os.path.dirname(os.path.abspath(__file__)), "pavilion-workshop.pptx")
 prs.save(OUT)
 print(f"Wrote {OUT} with {len(SLIDES)} slides.")

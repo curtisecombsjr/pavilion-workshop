@@ -1,6 +1,14 @@
+# Python
 .venv/
-__pycache__/
+venv/
+**/__pycache__/
 *.pyc
+
+# LibreOffice lock files (created while rendering the deck)
 .~lock.*#
-pavilion-workshop.pdf
+
+# Rendered handouts / scratch (the .pptx IS tracked; the PDF is regenerated)
+*.pdf
+
+# Local Claude project instructions (machine-specific, not for the public repo)
 CLAUDE.md

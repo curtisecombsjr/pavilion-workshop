@@ -1,0 +1,5 @@
+# Deck generator (deck/build_deck.py)
+python-pptx>=0.6.21
+
+# Used by the MySQL result logger (plugins/mysql_logger.py) on the cluster
+pymysql>=1.0.0
