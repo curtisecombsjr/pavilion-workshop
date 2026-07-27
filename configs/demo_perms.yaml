@@ -6,11 +6,22 @@ matrix:
   scheduler: pbs
   schedule:
     share_allocation: false
-    pbs: {queue: workq, nodes: 1, walltime: '00:02:00'}
-  permute_on: [size, mode]
+    pbs:
+      queue: workq
+      nodes: 1
+      walltime: '00:02:00'
+  permute_on:
+    - size
+    - mode
   variables:
-    size: ['small', 'medium', 'large']
-    mode: ['read', 'write']
+    size:
+      - 'small'
+      - 'medium'
+      - 'large'
+    mode:
+      - 'read'
+      - 'write'
   subtitle: '{{size}}-{{mode}}'
   run:
-    cmds: ['echo "size={{size}} mode={{mode}} host=$(hostname)"']
+    cmds:
+      - 'echo "size={{size}} mode={{mode}} host=$(hostname)"'

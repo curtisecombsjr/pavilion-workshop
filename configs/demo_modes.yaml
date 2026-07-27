@@ -2,11 +2,17 @@
 mode_demo:
   summary: 'A mode overrides config at run time (PBS)'
   scheduler: pbs
-  schedule: {pbs: {queue: workq, nodes: 1, walltime: '00:02:00'}}
+  schedule:
+    pbs:
+      queue: workq
+      nodes: 1
+      walltime: '00:02:00'
   variables:
     env_label: 'default'
   run:
-    cmds: ['echo "running with label={{env_label}}"']
+    cmds:
+      - 'echo "running with label={{env_label}}"'
   result_parse:
     regex:
-      label: {regex: 'label=(\S+)'}
+      label:
+        regex: 'label=(\S+)'
