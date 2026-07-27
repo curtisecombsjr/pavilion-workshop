@@ -43,3 +43,24 @@ metrics:
         regex: 'latency (\S+)'
       errors:
         regex: 'errors (\S+)'
+salog:
+  summary: 'saLog demo — writes a per-node .log so the sa_log logger fires on release'
+  scheduler: pbs
+  schedule:
+    pbs:
+      queue: workq
+      nodes: 1
+      walltime: '00:02:00'
+  run:
+    cmds:
+      - 'exec > "$(hostname).log" 2>&1'
+      - 'echo "saLog demo passed"'
+  result_parse:
+    regex:
+      passed:
+        regex: 'saLog demo passed'
+        action: store_true
+        files: ['*.log']
+        per_file: name
+  result_evaluate:
+    result: 'all(per_file.*.passed)'

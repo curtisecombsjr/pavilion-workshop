@@ -37,7 +37,7 @@ scheduler dispatched it. (Running a PBS test also proves PBS itself works.)
 | L8 | `./08-output-csv.sh` | csv_file logger | `pav run demo_pbs.pass demo_pbs.metrics` → `qstat -a` → `tail ~/pav_logs/results.csv` |
 | L9 | `./09-opensearch.sh` | opensearch logger → index → Grafana | `pav run -m pbs opensearch_verify` → `qstat -a` → `python3 ~/opensearch_results.py --name opensearch_verify` |
 | L10 | `./10-mysql.sh` | mysql logger → MySQL table | `pav run demo_pbs.metrics` → `qstat -a` → `mysql pavilion -e "SELECT pav_id,name,result,sys_name,ROUND(duration,3) dur FROM results ORDER BY logged_at DESC LIMIT 5"` |
-| saLog | `./12-salog.sh` | saLog CSV logger (run → PBS → CSV) | `pav run demo_pbs.pass demo_pbs.fail` → `qstat -a` → `tail salog_output.txt` |
+| saLog | `./12-salog.sh` | saLog CSV logger (run → PBS → CSV) | `pav run demo_pbs.salog` → `qstat -a` → `tail salog_output.txt` |
 
 Then open **Grafana**: `http://<your-grafana-host>:3000`.
 

@@ -699,18 +699,17 @@ SLIDES = [
 
  {"type": "demo", "title": "Output plugin: saLog", "level": "saLog", "run": "12-salog.sh",
   "steps": [
-    {"cmd": "pav run demo_pbs.pass demo_pbs.fail    # 1. run in Pavilion",
-     "out": "sid: s70\ntests: 2"},
-    {"cmd": "qstat -a                               # 2. the jobs, running in PBS",
-     "out": "8383.pbs-server pavilion workq pav_demo_*  1  1  R"},
-    {"cmd": "tail salog_output.txt                  # 3. the CSV saLog wrote on release",
-     "out": "x1003c7s7b0n3,\"pav_test result=PASS\",pavilion,released\n"
-            "x1003c7s7b0n1,x1003c7s7b0n2,x1003c7s7b0n3,\"pav_test result=FAIL\",pavilion,released"},
+    {"cmd": "pav run demo_pbs.salog                 # 1. run in Pavilion (per_file: name)",
+     "out": "sid: s141\ntests: 1"},
+    {"cmd": "qstat -a                               # 2. the job, running in PBS",
+     "out": "8410.pbs-server pavilion workq pav_demo_*  1  1  R"},
+    {"cmd": "tail salog_output.txt                  # 3. the CSV the sa_log plugin wrote on release",
+     "out": "x1002c6s2b0n1,\"demo_pbs.salog result=PASS\",pavilion,released"},
   ],
-  "caption": "Run in Pavilion → jobs in PBS → saLog writes a CSV row as each node is released.",
-  "notes": "saLog is a logger specific to us (NASA/NOAA). Pavilion's sa_log result plugin invokes it as "
-           "nodes are released from the PBS job — one CSV row per node, with the test result. It writes "
-           "node(s), content (result), user, and the 'released' action."},
+  "caption": "Run in Pavilion → job in PBS → the sa_log plugin calls saLog per node as it's released.",
+  "notes": "saLog is a logger specific to us (NASA/NOAA). The test uses a per_file: name parser so each "
+           "node's result is recorded; Pavilion's sa_log plugin then invokes saLog once per node with the "
+           "'released' action, writing node, content (result), user, action to the CSV."},
 
  {"type": "demo", "title": "Output plugin: OpenSearch → Grafana", "level": "L9", "run": "09-opensearch.sh",
   "steps": [
