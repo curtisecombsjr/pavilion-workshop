@@ -2,7 +2,7 @@
 
 Everything below is **verified working** on the cluster (2026-07-26). Each demo is a
 one-command script; every `pav run` goes through PBS and is followed by `qstat -a`.
-The deck (`../pavilion-workshop.pptx`) has a slide + speaker notes per demo.
+The deck (`../deck/pavilion-workshop.pptx`) has a slide + speaker notes per demo.
 
 ## Before you start (once, at the podium)
 
@@ -52,7 +52,8 @@ Then open **Grafana**: `http://<your-grafana-host>:3000`.
 
 ## Where things live
 
-- Demo scripts: `~/pav_demo/` on **pbs-server** (source of truth: `hpc/pavilion-presentation/demo/`).
-- Test/mode/series configs I authored: `hpc/pavilion-presentation/configs/` (deployed into `/home/pavilion/pavilion2/config/{suites,modes,series}`).
-- Command plugins (fixed): `/home/pavilion/pavilion2/config/plugins/command/` (source: `hpc/pavilion2/config/plugins/command/`).
-- The deck + its build script: `hpc/pavilion-presentation/pavilion-workshop.pptx`, `build_deck.py`.
+- Demo scripts: `~/pav_demo/` on **pbs-server** (source of truth: `demo/` in this repo).
+- Test/mode/series configs: `configs/` in this repo (deployed into `~/pavilion2/config/{suites,modes,series}`). See `configs/README.md`.
+- MySQL result logger: `plugins/` in this repo (deployed into `~/pavilion2/config/plugins/result_output/`). See `plugins/README.md`.
+- Command plugins + other loggers: `~/pavilion2/config/plugins/{command,result_output}/` (source: the framework project `../pavilion2/`).
+- The deck + its build script: `deck/pavilion-workshop.pptx`, `deck/build_deck.py`.
