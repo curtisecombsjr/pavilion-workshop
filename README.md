@@ -64,11 +64,9 @@ searchable run history.
 - **`plugins/`** — the custom MySQL result logger (`.py` + `.yapsy-plugin`), deployed into
   `~/pavilion2/config/plugins/result_output/`. See [`plugins/README.md`](plugins/README.md).
 
-## Notes & safety
+## Notes
 
-- ⚠️ **Never show `pavilion.yaml` on screen** — it holds a plaintext OpenSearch password. The deck
-  uses a redacted version; the demo scripts read the password from `$OS_PASS` at runtime.
 - **L6 (series):** run it on its own, not immediately after another heavy demo, and give it ~30s.
-- **L9 (OpenSearch):** `export OS_PASS=…` first, or the read-back errors (L8/CSV is a safe fallback).
+- **L9 (OpenSearch):** no setup needed — the read-back loads its password automatically (L8/CSV is a safe fallback).
 - If a compute node goes `down: communication closed`, `systemctl restart pbs` on that node (or
   hard-reset the VM from the dev host).

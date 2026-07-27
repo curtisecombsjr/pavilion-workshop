@@ -3,6 +3,20 @@
 Notable changes to the Pavilion workshop deck, demos, configs, and plugins.
 Dates are when the work landed; newest first.
 
+## 2026-07-27
+
+### Docs
+- Removed the stale OpenSearch-password steps and the "don't display `pavilion.yaml`" warning.
+  The read-back (`opensearch_results.py`) now auto-loads its password, so no `OS_PASS` export is
+  needed. No secrets live in this repo (scanned) — `pavilion.yaml` is cluster-only, never checked in.
+
+### Demos
+- Renumbered the demo scripts to a clean `01`…`14` (inheritance first; evaluate is now `04-evaluate`).
+- Added a live **inheritance** demo and a **result-evaluation** section/demo (`score > 100` → PASS/FAIL).
+- Series demo now runs one `smoke` set (pass + fail + metrics).
+- Mode demo overrides a value to flip a test FAIL→PASS (throughput vs a `> 1300` check).
+- Fixed the `sa_log` logger to read the flattened `file` field, so it writes a fresh CSV row per run.
+
 ## 2026-07-26
 
 ### Repository

@@ -729,8 +729,7 @@ SLIDES = [
     "opensearch — ships each result document into the `pavilion-results` index.",
     "Configured once in pavilion.yaml → every test result flows through them.",
   ],
-  "notes": "Result loggers run at the end of the results stage. One config, applies to all runs. "
-           "(Redact the OpenSearch password if you ever show pavilion.yaml.)"},
+  "notes": "Result loggers run at the end of the results stage. One config, applies to all runs."},
 
  {"type": "demo", "title": "Output plugin: CSV", "level": "L8", "run": "10-output-csv.sh",
   "out_size": 11.5,
