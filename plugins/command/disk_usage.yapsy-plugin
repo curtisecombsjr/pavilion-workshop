@@ -1,0 +1,6 @@
+[Core]
+name = disk-usage
+module = disk_usage
+
+[Command]
+class_name = DiskUsageCommand

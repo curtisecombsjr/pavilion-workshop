@@ -1,0 +1,6 @@
+[Core]
+name = recent
+module = recent
+
+[Command]
+class_name = RecentCommand

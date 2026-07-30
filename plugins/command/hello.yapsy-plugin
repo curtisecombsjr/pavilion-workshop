@@ -1,0 +1,6 @@
+[Core]
+name = hello
+module = hello
+
+[Command]
+class_name = HelloCommand

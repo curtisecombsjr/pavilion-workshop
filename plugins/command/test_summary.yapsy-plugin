@@ -1,0 +1,6 @@
+[Core]
+name = test-summary
+module = test_summary
+
+[Command]
+class_name = TestSummaryCommand

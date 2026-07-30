@@ -61,8 +61,9 @@ searchable run history.
 
 - **`configs/`** — the test/mode/series YAML, deployed into
   `~/pavilion2/config/{suites,modes,series}` on the cluster. See [`configs/README.md`](configs/README.md).
-- **`plugins/`** — the custom MySQL result logger (`.py` + `.yapsy-plugin`), deployed into
-  `~/pavilion2/config/plugins/result_output/`. See [`plugins/README.md`](plugins/README.md).
+- **`plugins/`** — all the custom plugins shown in the workshop: result loggers
+  (`result_output/`: csv_file, sa_log, opensearch, mysql) and command plugins
+  (`command/`: hello, recent, test_summary, disk_usage). See [`plugins/README.md`](plugins/README.md).
 
 ## Notes
 

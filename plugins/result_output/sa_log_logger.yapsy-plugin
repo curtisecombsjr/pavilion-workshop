@@ -1,0 +1,3 @@
+[Core]
+Name = SA Log Logger
+Module = sa_log_logger

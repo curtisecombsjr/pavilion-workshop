@@ -1,0 +1,3 @@
+[Core]
+Name = CSV File Logger
+Module = csv_file_logger
