@@ -12,13 +12,15 @@ Repo: <https://github.com/curtisecombsjr/pavilion-workshop>
 pavilion-workshop/
 ├── deck/                 # the presentation
 │   ├── build_deck.py     #   generates the .pptx from a plain SLIDES list
-│   └── pavilion-workshop.pptx   # the deck (48 slides + speaker notes)
+│   └── pavilion-workshop.pptx   # the deck (52 slides + speaker notes)
 ├── demo/                 # the live-demo run-scripts + run-of-show
-│   ├── 01-basic.sh … 12-salog.sh, _lib.sh
+│   ├── 01-inheritance.sh … 14-salog.sh, _lib.sh
 │   └── README.md         #   the run-of-show for the day (start here to present)
 ├── configs/              # the Pavilion test / mode / series YAML the demos use
 │   └── README.md
-├── plugins/              # custom Pavilion plugins (the MySQL result logger)
+├── plugins/              # custom Pavilion plugins
+│   ├── result_output/    #   result loggers: csv_file, sa_log, opensearch, mysql
+│   ├── command/          #   command plugins: hello, recent, test_summary, disk_usage
 │   └── README.md
 ├── requirements.txt      # python-pptx (deck) + pymysql (mysql logger)
 └── CHANGELOG.md
@@ -50,7 +52,7 @@ for the full run-of-show. Short version:
 ssh root@pbs-server        # keyed, no password
 sudo -iu pavilion          # pav config lives in pavilion's home — the -i matters
 cd ~/pav_demo              # the deployed run-scripts
-./01-basic.sh              # … through ./12-salog.sh
+./01-inheritance.sh        # … through ./14-salog.sh (run in any order)
 ```
 
 The demo ladder: basics (PASS/FAIL) → result parsing → permutations → PBS scheduling → modes →

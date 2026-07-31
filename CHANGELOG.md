@@ -3,6 +3,16 @@
 Notable changes to the Pavilion workshop deck, demos, configs, and plugins.
 Dates are when the work landed; newest first.
 
+## 2026-07-30
+
+### Repository
+- Added the remaining custom plugins so the repo is self-contained. Previously only the MySQL
+  logger shipped here; now it includes the other three result loggers (`csv_file`, `sa_log`,
+  `opensearch`) and the four command plugins (`hello`, `recent`, `test_summary`, `disk_usage`).
+- Reorganized `plugins/` into `result_output/` and `command/` subdirs (mirroring the cluster's
+  `config/plugins/`); rewrote `plugins/README.md` and updated the top-level README. Scanned —
+  no secrets (the OpenSearch logger reads its password from `pavilion.yaml`, which is cluster-only).
+
 ## 2026-07-27
 
 ### Docs
